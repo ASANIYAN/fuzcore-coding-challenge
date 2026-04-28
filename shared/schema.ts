@@ -254,3 +254,16 @@ export const userInvoiceCounters = pgTable("user_invoice_counters", {
     .primaryKey(),
   lastInvoiceNumber: integer("last_invoice_number").notNull().default(0),
 });
+
+export const processedWebhookEvents = pgTable(
+  "processed_webhook_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    eventId: text("event_id").notNull(),
+    eventType: text("event_type").notNull(),
+    processedAt: timestamp("processed_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [uniqueIndex("processed_webhook_events_event_id_unique").on(table.eventId)],
+);

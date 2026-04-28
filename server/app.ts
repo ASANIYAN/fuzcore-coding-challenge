@@ -8,6 +8,7 @@ import { sanitizeMiddleware } from "./middleware/sanitize.middleware";
 export async function createApp() {
   const app = express();
 
+  app.use("/api/webhooks/stripe", express.raw({ type: "application/json" }));
   app.use(express.json());
   app.use(express.urlencoded({ extended: false }));
   app.use(requestIdMiddleware);

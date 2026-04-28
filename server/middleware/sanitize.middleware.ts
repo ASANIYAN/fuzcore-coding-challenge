@@ -2,6 +2,10 @@ import type { NextFunction, Request, Response } from "express";
 import sanitizeHtml from "sanitize-html";
 
 function sanitizeValue(value: unknown): unknown {
+  if (Buffer.isBuffer(value)) {
+    return value;
+  }
+
   if (typeof value === "string") {
     const trimmed = value.trim();
     return sanitizeHtml(trimmed, {

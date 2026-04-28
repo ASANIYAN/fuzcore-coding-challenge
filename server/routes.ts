@@ -7,6 +7,7 @@ import { customersRouter } from "./modules/customers/customers.routes";
 import { dashboardRouter } from "./modules/dashboard/dashboard.routes";
 import { invoicesRouter } from "./modules/invoices/invoices.routes";
 import { transactionsRouter } from "./modules/transactions/transactions.routes";
+import { webhooksRouter } from "./modules/webhooks/webhooks.routes";
 
 export async function registerRoutes(app: Express) {
   app.get("/docs/openapi.json", (_req, res) => {
@@ -20,4 +21,5 @@ export async function registerRoutes(app: Express) {
   app.use("/api/dashboard", dashboardRouter);
   app.use("/api/invoices", invoicesRouter);
   app.use("/api/transactions", transactionsRouter);
+  app.use("/api/webhooks", webhooksRouter);
 }

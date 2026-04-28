@@ -11,12 +11,13 @@
 3. [Infrastructure](#infrastructure)
 4. [Database Schema](#database-schema)
 5. [Triggers](#triggers)
-6. [Security](#security)
-7. [Logging](#logging)
-8. [API Design](#api-design)
-9. [REST API Endpoints](#rest-api-endpoints)
-10. [Background Jobs](#background-jobs)
-11. [Invoice Lifecycle](#invoice-lifecycle)
+6. [Concurrency & Locking](#concurrency--locking)
+7. [Security](#security)
+8. [Logging](#logging)
+9. [API Design](#api-design)
+10. [REST API Endpoints](#rest-api-endpoints)
+11. [Background Jobs](#background-jobs)
+12. [Invoice Lifecycle](#invoice-lifecycle)
 
 ---
 
@@ -43,8 +44,9 @@ A full-stack accounting app for small business owners to manage customers, recor
 ### Money Handling
 
 - **BIGINT** for all monetary amounts, stored in the smallest currency unit (e.g. cents, kobo, pence). Conversion to and from human-readable decimals happens exclusively at the application boundary — never inside the database. This eliminates floating point precision errors caused by base-2 representation of base-10 decimals.
-- **Currency** stored as a string column constrained via CHECK constraint to valid ISO 4217 codes. Additionally validated at the Zod layer before reaching the database.
-- The scale multiplier (100 for most currencies, 1000 for KWD etc) is applied in a shared currency service used consistently across all boundary conversions.
+- **Currency** is defined as a single `SUPPORTED_CURRENCIES` array in `lib/currency.ts`. This array is the single source of truth for valid currency codes, scale multipliers, names, and symbols. The Drizzle CHECK constraint and Zod validation schema are both derived from this array — adding a new currency means adding one entry to the array and running a migration.
+- Currencies with non-standard scales: **JPY** (scale 1, no minor unit), **KWD** (scale 1000, three decimal places). All others use scale 100.
+- The 20 supported currencies span Africa (NGN, GHS, KES, ZAR, EGP), UK/US (GBP, USD), Europe (EUR, CHF, SEK, NOK), Asia Pacific (JPY, CNY, INR, AUD, SGD, AED, KWD), and Americas (CAD, BRL).
 
 ### Derived Values
 
@@ -65,8 +67,16 @@ A full-stack accounting app for small business owners to manage customers, recor
 - Every status change stamps the corresponding timestamp (`sent_at`, `paid_at`, `voided_at`) in the same database operation. Status enum and timestamps are kept in sync — never one without the other.
 - Payment links are only generated for `sent` invoices. The state machine already protects link amount consistency — once sent, an invoice cannot return to draft where amounts could be edited.
 
-### Category-Transaction Type Consistency
+### Concurrency & Locking
 
+- **Pessimistic locking** (`SELECT FOR UPDATE`) is used for any operation that involves a read-modify-write sequence on a shared row. Locks are acquired inside a transaction and released on commit.
+- **Status re-check inside the lock** is mandatory — application-level pre-checks are fast-path optimisations only. The authoritative check always happens after the lock is acquired to guard against stale reads from concurrent requests.
+- **CSV imports** are serialised per user via BullMQ job queue (concurrency 1 per user) rather than DB locks — bulk inserts are better handled asynchronously.
+
+### Webhook Idempotency
+
+- Stripe may deliver the same webhook event more than once. Three layers protect against duplicate processing: a `processed_webhook_events` lookup (earliest exit), pessimistic row lock with status re-check (concurrency guard), and the DB state machine trigger (last line of defence).
+- Stripe `event.id` is stored in `processed_webhook_events` after successful processing. Any duplicate delivery is rejected at the first layer before any invoice logic runs.
 - A transaction typed `income` must not link to a category typed `expense` and vice versa. Enforced via a `BEFORE INSERT OR UPDATE` trigger on `transactions` that cross-queries the `categories` table. A CHECK constraint cannot enforce this as it is row-scoped and cannot perform cross-table lookups.
 
 ### ORM and Migrations
@@ -307,7 +317,29 @@ A full-stack accounting app for small business owners to manage customers, recor
 
 **Notes**
 
-- Incremented transactionally on each invoice creation. Ensures per-user sequential invoice numbers with no gaps and no race conditions.
+- Incremented transactionally on each invoice creation using `SELECT FOR UPDATE` to prevent race conditions. Ensures per-user sequential invoice numbers with no gaps and no duplicates under concurrent load.
+- Lock is scoped per user — concurrent invoice creation by different users does not cause contention.
+
+---
+
+### `processed_webhook_events`
+
+| Column       | Type        | Constraints                   |
+| ------------ | ----------- | ----------------------------- |
+| id           | UUID        | PK, default gen_random_uuid() |
+| event_id     | TEXT        | NOT NULL — Stripe event.id    |
+| event_type   | TEXT        | NOT NULL                      |
+| processed_at | TIMESTAMPTZ | NOT NULL, default now()       |
+
+**Indexes & Constraints**
+
+- `UNIQUE (event_id)` — prevents duplicate processing at the DB level
+
+**Notes**
+
+- Checked at the very start of webhook processing before any invoice logic. If `event_id` already exists, return 200 immediately — no further processing.
+- Inserted after successful invoice transition and email enqueue. Atomic with the invoice update where possible.
+- Serves as a permanent audit log of all processed Stripe events.
 
 ---
 
@@ -338,6 +370,69 @@ Terminal states (no transitions out):
 **Event:** `BEFORE INSERT OR UPDATE ON transactions`
 
 Fetches `type` from `categories` for the given `category_id`. Raises an exception if `categories.type` does not match `transactions.type`. A CHECK constraint cannot enforce this as it cannot perform cross-table lookups.
+
+## Concurrency & Locking
+
+### Locking Strategy by Scenario
+
+| Scenario                         | Strategy                                                            | Reason                                                                   |
+| -------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Invoice status transition        | `SELECT FOR UPDATE` on invoice row                                  | Single row, must be synchronous, prevents concurrent transitions         |
+| Invoice number increment         | `SELECT FOR UPDATE` on counter row                                  | Atomic read-modify-write, scoped per user                                |
+| Webhook payment confirmation     | `processed_webhook_events` check + `SELECT FOR UPDATE` + DB trigger | Three layers — Stripe can retry concurrently                             |
+| CSV import                       | BullMQ serial queue per user (concurrency: 1)                       | Bulk operation, better handled async, makes duplicate detection reliable |
+| Customer / Transaction mutations | No explicit lock                                                    | Scoped to `user_id`, no shared resource contention                       |
+
+---
+
+### Invoice Status Transition — Locked Flow
+
+All status transitions, whether triggered by the user or a webhook, go through the same locked flow:
+
+```
+1. Begin transaction
+2. SELECT * FROM invoices WHERE id = ? AND user_id = ? FOR UPDATE
+   → Blocks any concurrent mutation on this row
+3. Re-check current status inside lock (authoritative check)
+4. If already in target state → release lock, return early (idempotent)
+5. If transition invalid → release lock, throw InvalidTransitionError
+6. Apply transition, stamp corresponding timestamp
+7. Commit → lock released
+```
+
+---
+
+### Invoice Counter — Locked Increment
+
+```
+1. Begin transaction
+2. SELECT last_invoice_number FROM user_invoice_counters
+   WHERE user_id = ? FOR UPDATE
+   → Blocks concurrent increments for this user only
+3. Increment value
+4. UPDATE user_invoice_counters SET last_invoice_number = ?
+5. INSERT invoice with new invoice_number
+6. Commit → lock released
+```
+
+---
+
+### Webhook — Full Idempotency Flow
+
+```
+1. Verify Stripe signature → reject with 400 if invalid
+2. Return 200 to Stripe immediately
+3. Check processed_webhook_events for event.id
+   → If found: already processed, return early
+4. Begin transaction
+5. SELECT * FROM invoices WHERE id = ? FOR UPDATE
+6. Re-check status is still 'sent' inside lock
+   → If not: duplicate or race condition, return early
+7. Transition to paid, stamp paid_at
+8. Insert event.id into processed_webhook_events
+9. Commit
+10. Enqueue owner notification email (after commit)
+```
 
 ---
 
@@ -565,13 +660,13 @@ All monetary values are returned as BIGINT with their currency code. Conversion 
 
 ### Invoices — `/invoices`
 
-| Method | Endpoint               | Action                                                                                                                                                                                         |
-| ------ | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/invoices`            | Returns paginated list of invoices scoped to authenticated user, ordered by `created_at` descending.                                                                                           |
-| GET    | `/invoices/:id`        | Returns invoice with all line items. Totals and subtotals computed at query time — never stored.                                                                                               |
-| POST   | `/invoices`            | Creates invoice and all line items atomically in a single DB transaction — succeeds or rolls back entirely. Assigns next sequential `invoice_number`. Invoice starts as `draft`.               |
-| PATCH  | `/invoices/:id`        | Updates invoice header fields (notes, due date, tax rate etc). Only permitted when status is `draft`.                                                                                          |
-| POST   | `/invoices/:id/status` | Transitions invoice status. Accepts `status` in body. DB trigger validates transition. Corresponding timestamp stamped in same operation. Payment link generated when transitioning to `sent`. |
+| Method | Endpoint               | Action                                                                                                                                                                                                                                                                                                                                             |
+| ------ | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/invoices`            | Returns paginated list of invoices scoped to authenticated user, ordered by `created_at` descending.                                                                                                                                                                                                                                               |
+| GET    | `/invoices/:id`        | Returns invoice with all line items. Totals and subtotals computed at query time — never stored.                                                                                                                                                                                                                                                   |
+| POST   | `/invoices`            | Creates invoice and all line items atomically in a single DB transaction — succeeds or rolls back entirely. Assigns next sequential `invoice_number`. Invoice starts as `draft`.                                                                                                                                                                   |
+| PATCH  | `/invoices/:id`        | Updates invoice header fields (notes, due date, tax rate etc). Only permitted when status is `draft`.                                                                                                                                                                                                                                              |
+| POST   | `/invoices/:id/status` | Transitions invoice status. Accepts `status` in body. DB trigger validates transition. When transitioning to `sent`: Stripe payment link created first, then DB updated atomically (status + sent_at + payment_link URL), then email job enqueued after commit. If Stripe call fails, DB is never touched and the operation can be safely retried. |
 
 **Query Parameters**
 
@@ -621,19 +716,59 @@ All monetary values are returned as BIGINT with their currency code. Conversion 
 
 ### Webhooks — `/webhooks`
 
-| Method | Endpoint           | Action                                                                                                                                                                                                                                                                                                                 |
-| ------ | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/webhooks/stripe` | Publicly accessible — no session auth. Verifies Stripe webhook signature before any processing. On payment success: looks up invoice by payment reference, transitions to `paid`, stamps `paid_at`, enqueues payment confirmation email to business owner. Invalid or unsigned requests rejected immediately with 400. |
+| Method | Endpoint           | Action                                                                                                                                                                                                                                                                                                                                     |
+| ------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| POST   | `/webhooks/stripe` | Publicly accessible — no session auth. Requires raw unparsed body for signature verification — registered before the global JSON parser. Verifies Stripe webhook signature before any processing. Responds 200 immediately to Stripe, then processes the event asynchronously. Invalid or unsigned requests rejected immediately with 400. |
+
+**Stripe Events Handled**
+
+| Event                           | Action                                                                                                                                                                                                                                  |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `checkout.session.completed`    | Primary success event. Looks up invoice via `invoiceId` stored in session metadata. Checks invoice is still `sent` (idempotency guard). Transitions to `paid`, stamps `paid_at`. Enqueues payment confirmation email to business owner. |
+| `checkout.session.expired`      | Session window elapsed without payment. Invoice remains `sent`. Logged for observability.                                                                                                                                               |
+| `payment_intent.payment_failed` | Underlying payment attempt failed. Invoice remains `sent` — session may still allow retry. Logged for observability.                                                                                                                    |
+
+**Notes**
+
+- `invoiceId` is stored in Checkout Session metadata at payment link creation time — this is how the webhook identifies which invoice to update.
+- Respond to Stripe **before** processing — Stripe expects a 200 within 30 seconds. Heavy processing after that window causes spurious retries.
+- Idempotency — if `checkout.session.completed` is delivered more than once, the invoice status check (`sent` guard) prevents a double transition. The DB trigger is a secondary safeguard.
+
+---
+
+### Currencies — `/currencies`
+
+| Method | Endpoint      | Action                                                                                                                                        |
+| ------ | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/currencies` | Returns the full list of supported currencies. No auth required — static reference data. Used by the frontend to populate currency dropdowns. |
+
+**Response shape:**
+
+```json
+{
+  "success": true,
+  "data": [
+    { "code": "NGN", "name": "Nigerian Naira", "symbol": "₦" },
+    { "code": "USD", "name": "US Dollar", "symbol": "$" }
+  ]
+}
+```
+
+**Notes**
+
+- `scale` is intentionally excluded — it is an internal implementation detail the frontend does not need.
+- Response is derived directly from `SUPPORTED_CURRENCIES` array — adding a currency to the array is automatically reflected here with no additional changes.
 
 ---
 
 ### Stretch Goal Endpoints
 
-| Method | Endpoint                     | Action                                                                                                                                                                                                                                                                 |
-| ------ | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/invoices/:id/pdf`          | Generates and returns a downloadable PDF containing: business owner details, customer details, invoice number, issue and due dates, line items table, subtotal, tax rate, tax amount, total, notes, payment link if present, PAID/VOID status watermark if applicable. |
-| POST   | `/transactions/import`       | Accepts CSV file upload. Parses and validates each row. Valid rows bulk inserted. Invalid rows reported with row number and reason. Duplicate detection via `import_hash` (hash of amount + currency + transaction_date + description + reference).                    |
-| POST   | `/invoices/:id/payment-link` | Generates a Stripe payment link for the invoice total. Only permitted for `sent` invoices. Stores link on invoice record and returns it.                                                                                                                               |
+| Method | Endpoint                      | Action                                                                                                                                                                                                                                                                            |
+| ------ | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/invoices/:id/pdf`           | Generates and returns a downloadable PDF containing: business owner details, customer details, invoice number, issue and due dates, line items table, subtotal, tax rate, tax amount, total, notes, payment link if present, PAID/VOID status watermark if applicable.            |
+| POST   | `/transactions/import`        | Accepts CSV file upload. Validates file format and enqueues an import job via BullMQ. Returns `202 Accepted` with a `jobId` immediately — does not process inline. Worker processes imports serially per user (concurrency: 1) making `import_hash` duplicate detection reliable. |
+| GET    | `/transactions/import/:jobId` | Poll for import job status and results. Returns `pending`, `processing`, `completed`, or `failed` with row-level error details on completion.                                                                                                                                     |
+| POST   | `/invoices/:id/payment-link`  | Generates a Stripe payment link for the invoice total. Only permitted for `sent` invoices. Stores link on invoice record and returns it.                                                                                                                                          |
 
 **CSV Import Response:**
 
@@ -662,6 +797,8 @@ Email sending is an internal side effect, not an endpoint. Triggered by applicat
 - Invoice transitions to `sent` — email customer with invoice summary and payment link
 - Stripe webhook confirms payment — email business owner with payment confirmation
 
+Email jobs are enqueued **only after a successful DB commit** — never inside a transaction.
+
 **Retry strategy:** exponential backoff with jitter on failure. Max retry attempts configured per job type. On max retries exceeded, job moves to the failed queue and is logged with full context for manual review.
 
 **Flow:**
@@ -681,6 +818,36 @@ On max retries → log + alert
 
 ---
 
+### CSV Import Queue — BullMQ + Redis
+
+CSV imports are processed asynchronously to avoid HTTP timeout on large files and to serialise processing per user.
+
+**Concurrency:** 1 job per user at a time — prevents concurrent imports for the same user from racing on `import_hash` duplicate detection.
+
+**Flow:**
+
+```
+POST /transactions/import → validate file format
+        ↓
+Enqueue import job with file contents and user_id
+        ↓
+Return 202 Accepted with jobId
+        ↓
+Worker picks up job
+        ↓
+Parse and validate each row
+        ↓
+Bulk insert valid rows, collect row-level errors
+        ↓
+Mark job complete with results summary
+        ↓
+Client polls GET /transactions/import/:jobId for status
+```
+
+**Import hash** — each row is hashed from `amount + currency + transaction_date + description + reference`. Stored on the transaction record. Duplicate rows (same hash, same user) are skipped and reported in errors.
+
+---
+
 ## Invoice Lifecycle — Happy Path
 
 ```
@@ -688,21 +855,34 @@ On max retries → log + alert
         ↓
 2. Owner creates invoice → status: draft
    - Selects customer, sets dates, adds line items, optional tax + notes
-   - Invoice number assigned (INV-0001)
+   - Counter row locked (SELECT FOR UPDATE), incremented, invoice_number assigned
+   - Invoice + line items + counter update committed atomically
         ↓
 3. Owner reviews and edits freely while in draft
         ↓
 4. Owner transitions to sent
-   - sent_at stamped
-   - Invoice locked — no further edits to amounts or line items
-   - Payment link generated and stored on invoice
-   - Email job enqueued → customer receives invoice + payment link
+   Step 1 → Create Stripe payment link
+            (if this fails: stop — DB untouched, safe to retry)
+   Step 2 → Begin DB transaction
+            - Lock invoice row (SELECT FOR UPDATE)
+            - Re-check status is still draft
+            - Set status to sent, stamp sent_at, store payment_link URL
+            - Commit
+   Step 3 → Enqueue email job (only after successful commit)
+            → Customer receives invoice + payment link
         ↓
 5. Customer clicks payment link → completes payment via Stripe
         ↓
-6. Stripe fires webhook → signature verified
-   - Invoice transitioned to paid, paid_at stamped
-   - Owner notification email enqueued
+6. Stripe fires checkout.session.completed webhook
+   - Signature verified
+   - 200 returned to Stripe immediately
+   - Check processed_webhook_events for event.id → exit early if found
+   - Begin transaction, lock invoice row (SELECT FOR UPDATE)
+   - Re-check status is still sent inside lock
+   - Transition to paid, stamp paid_at
+   - Insert event.id into processed_webhook_events
+   - Commit
+   - Enqueue owner notification email (after commit)
         ↓
 7. Terminal state: paid
 ```
