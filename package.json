@@ -9,7 +9,7 @@
     "build": "tsx script/build.ts",
     "start": "npm run db:push && NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
-    "test:env": "tsx --test server/lib/env.schema.test.ts",
+    "test": "tsx --test \"server/**/*.test.*\"",
     "db:push": "drizzle-kit push",
     "security:check": "node script/security-check.mjs"
   },

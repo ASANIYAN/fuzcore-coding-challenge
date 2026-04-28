@@ -44,6 +44,7 @@ export const envSchema = z.object({
   MAIL_USER: optionalString,
   MAIL_PASS: optionalString,
   MAIL_FROM: optionalString,
+  HMAC_SECRET: optionalString,
 });
 
 export const dbEnvSchema = envSchema.pick({
