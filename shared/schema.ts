@@ -9,11 +9,14 @@ import {
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const verificationCodeTypeEnum = pgEnum("verification_code_type", [
   "email_verification",
   "password_reset",
 ]);
+
+export const customerTypeEnum = pgEnum("customer_type", ["person", "company"]);
 
 export const users = pgTable(
   "users",
@@ -74,6 +77,41 @@ export const verificationCodes = pgTable(
       table.userId,
       table.type,
     ),
+  }),
+);
+
+export const customers = pgTable(
+  "customers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    displayName: text("display_name").notNull(),
+    companyName: text("company_name"),
+    type: customerTypeEnum("type").notNull(),
+    email: text("email"),
+    phone: text("phone"),
+    taxId: text("tax_id"),
+    addressLine1: text("address_line_1"),
+    addressLine2: text("address_line_2"),
+    city: text("city"),
+    state: text("state"),
+    postalCode: text("postal_code"),
+    country: text("country"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+  },
+  (table) => ({
+    userIdIndex: index("customers_user_id_idx").on(table.userId),
+    userEmailUnique: uniqueIndex("customers_user_email_unique")
+      .on(table.userId, table.email)
+      .where(sql`${table.email} is not null`),
   }),
 );
 

@@ -3,6 +3,7 @@ import swaggerUi from "swagger-ui-express";
 import { openApiDocument } from "./lib/openapi";
 import { authRouter } from "./modules/auth/auth.routes";
 import { counterRouter } from "./modules/counter/counter.routes";
+import { customersRouter } from "./modules/customers/customers.routes";
 
 export async function registerRoutes(app: Express) {
   app.get("/docs/openapi.json", (_req, res) => {
@@ -12,4 +13,5 @@ export async function registerRoutes(app: Express) {
 
   app.use("/api/auth", authRouter);
   app.use("/api/counter", counterRouter);
+  app.use("/api/customers", customersRouter);
 }
