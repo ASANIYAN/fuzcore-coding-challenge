@@ -1,48 +1,9 @@
-import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
 import { createServer } from "http";
+import { createApp } from "./app";
 import { env } from "./lib/env";
+import { logger } from "./lib/logger";
 
-const app = express();
-const httpServer = createServer(app);
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-
-export function log(message: string, source = "express") {
-  const formattedTime = new Date().toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-  console.log(`${formattedTime} [${source}] ${message}`);
-}
-
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-      log(logLine);
-    }
-  });
-
-  next();
-});
+let httpServer = createServer();
 
 const RETRYABLE_LISTEN_ERRORS = new Set([
   "ENOTSUP",
@@ -90,7 +51,7 @@ async function startServer(port: number) {
     const host = hosts[i];
     try {
       await listenOnHost(port, host);
-      log(`serving on http://${host}:${port}`);
+      logger.info({ host, port }, "server started");
       return;
     } catch (error) {
       const listenError = error as NodeJS.ErrnoException;
@@ -104,9 +65,9 @@ async function startServer(port: number) {
         throw listenError;
       }
 
-      log(
-        `failed to bind ${host}:${port} (${listenError.code}), trying next host`,
-        "server",
+      logger.warn(
+        { host, port, code: listenError.code },
+        "failed to bind host, trying next fallback",
       );
     }
   }
@@ -118,17 +79,8 @@ async function startServer(port: number) {
 }
 
 (async () => {
-  await registerRoutes(httpServer, app);
-
-  app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    console.error("Internal Server Error:", err);
-    if (res.headersSent) {
-      return next(err);
-    }
-    return res.status(status).json({ message });
-  });
+  const app = await createApp();
+  httpServer = createServer(app);
 
   if (env.NODE_ENV === "production") {
     const { serveStatic } = await import("./static");
@@ -139,4 +91,7 @@ async function startServer(port: number) {
   }
 
   await startServer(env.PORT);
-})();
+})().catch((err: unknown) => {
+  logger.error({ err }, "fatal startup error");
+  process.exit(1);
+});
