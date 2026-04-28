@@ -17,6 +17,7 @@ export const verificationCodeTypeEnum = pgEnum("verification_code_type", [
 ]);
 
 export const customerTypeEnum = pgEnum("customer_type", ["person", "company"]);
+export const categoryTypeEnum = pgEnum("category_type", ["income", "expense"]);
 
 export const users = pgTable(
   "users",
@@ -112,6 +113,33 @@ export const customers = pgTable(
     userEmailUnique: uniqueIndex("customers_user_email_unique")
       .on(table.userId, table.email)
       .where(sql`${table.email} is not null`),
+  }),
+);
+
+export const categories = pgTable(
+  "categories",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    type: categoryTypeEnum("type").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+  },
+  (table) => ({
+    userIdIndex: index("categories_user_id_idx").on(table.userId),
+    userNameTypeUnique: uniqueIndex("categories_user_name_type_unique").on(
+      table.userId,
+      table.name,
+      table.type,
+    ),
   }),
 );
 
