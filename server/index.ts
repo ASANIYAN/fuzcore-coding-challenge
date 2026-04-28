@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { createServer } from "http";
+import { env } from "./lib/env";
 
 const app = express();
 const httpServer = createServer(app);
@@ -43,6 +44,79 @@ app.use((req, res, next) => {
   next();
 });
 
+const RETRYABLE_LISTEN_ERRORS = new Set([
+  "ENOTSUP",
+  "EOPNOTSUPP",
+  "EADDRNOTAVAIL",
+  "EAFNOSUPPORT",
+  "EPERM",
+]);
+
+function getListenHosts() {
+  const configuredHost = env.HOST?.trim();
+  if (!configuredHost) {
+    return ["127.0.0.1", "0.0.0.0"];
+  }
+
+  return Array.from(new Set([configuredHost, "127.0.0.1", "0.0.0.0"]));
+}
+
+async function listenOnHost(port: number, host: string) {
+  await new Promise<void>((resolve, reject) => {
+    const onError = (error: NodeJS.ErrnoException) => {
+      cleanup();
+      reject(error);
+    };
+    const onListening = () => {
+      cleanup();
+      resolve();
+    };
+    const cleanup = () => {
+      httpServer.off("error", onError);
+      httpServer.off("listening", onListening);
+    };
+
+    httpServer.once("error", onError);
+    httpServer.once("listening", onListening);
+    httpServer.listen({ port, host });
+  });
+}
+
+async function startServer(port: number) {
+  const hosts = getListenHosts();
+  let lastError: NodeJS.ErrnoException | undefined;
+
+  for (let i = 0; i < hosts.length; i += 1) {
+    const host = hosts[i];
+    try {
+      await listenOnHost(port, host);
+      log(`serving on http://${host}:${port}`);
+      return;
+    } catch (error) {
+      const listenError = error as NodeJS.ErrnoException;
+      lastError = listenError;
+      const isRetryable = Boolean(
+        listenError.code && RETRYABLE_LISTEN_ERRORS.has(listenError.code),
+      );
+      const hasNextHost = i < hosts.length - 1;
+
+      if (!isRetryable || !hasNextHost) {
+        throw listenError;
+      }
+
+      log(
+        `failed to bind ${host}:${port} (${listenError.code}), trying next host`,
+        "server",
+      );
+    }
+  }
+
+  throw (
+    lastError ??
+    new Error(`unable to bind server on port ${port} for hosts ${hosts.join(", ")}`)
+  );
+}
+
 (async () => {
   await registerRoutes(httpServer, app);
 
@@ -56,7 +130,7 @@ app.use((req, res, next) => {
     return res.status(status).json({ message });
   });
 
-  if (process.env.NODE_ENV === "production") {
+  if (env.NODE_ENV === "production") {
     const { serveStatic } = await import("./static");
     serveStatic(app);
   } else {
@@ -64,15 +138,5 @@ app.use((req, res, next) => {
     await setupVite(httpServer, app);
   }
 
-  const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    },
-  );
+  await startServer(env.PORT);
 })();

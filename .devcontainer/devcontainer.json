@@ -1,6 +1,6 @@
 {
   "name": "Coding Challenge",
-  "postCreateCommand": "npm install -g opencode-ai && npm install",
+  "postCreateCommand": "npm ci",
   "customizations": {
     "vscode": {
       "extensions": [
