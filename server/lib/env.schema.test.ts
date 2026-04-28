@@ -4,6 +4,7 @@ import { parseEnv } from "./env.schema";
 
 const baseEnv = {
   DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/challenge",
+  REDIS_URL: "redis://localhost:6379",
 };
 
 test("parseEnv applies defaults for NODE_ENV and PORT", () => {

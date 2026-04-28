@@ -35,6 +35,7 @@ const optionalPort = z.preprocess(
 
 export const envSchema = z.object({
   DATABASE_URL: z.string().url(),
+  REDIS_URL: z.string().url(),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   PORT: z.coerce.number().int().min(1).max(65535).default(5000),
   HOST: optionalString,
