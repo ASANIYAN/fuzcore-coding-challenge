@@ -5,6 +5,9 @@ import { getRedisClient } from "../lib/redis";
 const RATE_LIMIT_RULES: Record<string, { max: number; windowSeconds: number }> = {
   "auth-signup": { max: 5, windowSeconds: 15 * 60 },
   "auth-verify-email": { max: 10, windowSeconds: 15 * 60 },
+  "auth-login": { max: 10, windowSeconds: 15 * 60 },
+  "auth-forgot-password": { max: 5, windowSeconds: 15 * 60 },
+  "auth-reset-password": { max: 10, windowSeconds: 15 * 60 },
 };
 
 export const rateLimit = (_key: string) => {

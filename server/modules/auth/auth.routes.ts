@@ -1,9 +1,16 @@
 import { Router } from "express";
+import { requireAuth } from "../../middleware/auth.middleware";
 import { validate } from "../../middleware/validate.middleware";
 import { rateLimit } from "../../middleware/rate-limit.middleware";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
-import { signupSchema, verifyEmailSchema } from "./auth.schema";
+import {
+  forgotPasswordSchema,
+  loginSchema,
+  resetPasswordSchema,
+  signupSchema,
+  verifyEmailSchema,
+} from "./auth.schema";
 
 const authService = new AuthService();
 const authController = new AuthController(authService);
@@ -22,4 +29,27 @@ authRouter.post(
   rateLimit("auth-verify-email"),
   validate(verifyEmailSchema),
   authController.verifyEmail,
+);
+
+authRouter.post(
+  "/login",
+  rateLimit("auth-login"),
+  validate(loginSchema),
+  authController.login,
+);
+
+authRouter.post("/logout", requireAuth, authController.logout);
+
+authRouter.post(
+  "/forgot-password",
+  rateLimit("auth-forgot-password"),
+  validate(forgotPasswordSchema),
+  authController.forgotPassword,
+);
+
+authRouter.post(
+  "/reset-password",
+  rateLimit("auth-reset-password"),
+  validate(resetPasswordSchema),
+  authController.resetPassword,
 );
