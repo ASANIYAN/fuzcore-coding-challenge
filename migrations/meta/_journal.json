@@ -5,36 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1777379269605,
-      "tag": "0000_loud_hammerhead",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1777395408422,
-      "tag": "0001_married_invisible_woman",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1777396166259,
-      "tag": "0002_zippy_sage",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1777396622584,
-      "tag": "0003_amusing_talisman",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1777398607201,
-      "tag": "0004_fuzzy_hedge_knight",
+      "when": 1777415698145,
+      "tag": "0000_loose_wiccan",
       "breakpoints": true
     }
   ]

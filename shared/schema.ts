@@ -3,7 +3,6 @@ import {
   integer,
   pgEnum,
   pgTable,
-  serial,
   text,
   timestamp,
   uuid,
@@ -19,7 +18,10 @@ export const verificationCodeTypeEnum = pgEnum("verification_code_type", [
 
 export const customerTypeEnum = pgEnum("customer_type", ["person", "company"]);
 export const categoryTypeEnum = pgEnum("category_type", ["income", "expense"]);
-export const transactionTypeEnum = pgEnum("transaction_type", ["income", "expense"]);
+export const transactionTypeEnum = pgEnum("transaction_type", [
+  "income",
+  "expense",
+]);
 export const invoiceStatusEnum = pgEnum("invoice_status", [
   "draft",
   "sent",
@@ -163,7 +165,9 @@ export const transactions = pgTable(
     description: text("description"),
     reference: text("reference"),
     importHash: text("import_hash"),
-    transactionDate: timestamp("transaction_date", { withTimezone: true }).notNull(),
+    transactionDate: timestamp("transaction_date", {
+      withTimezone: true,
+    }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -249,9 +253,4 @@ export const userInvoiceCounters = pgTable("user_invoice_counters", {
     .references(() => users.id, { onDelete: "cascade" })
     .primaryKey(),
   lastInvoiceNumber: integer("last_invoice_number").notNull().default(0),
-});
-
-export const counter = pgTable("counter", {
-  id: serial("id").primaryKey(),
-  count: integer("count").notNull().default(0),
 });

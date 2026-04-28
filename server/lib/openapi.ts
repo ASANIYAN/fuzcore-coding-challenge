@@ -11,28 +11,6 @@ export const openApiDocument = {
     { name: "Auth" },
   ],
   paths: {
-    "/api/counter": {
-      get: {
-        tags: ["Health"],
-        summary: "Read sample counter",
-        responses: {
-          "200": {
-            description: "Counter state",
-          },
-        },
-      },
-    },
-    "/api/counter/increment": {
-      post: {
-        tags: ["Health"],
-        summary: "Increment sample counter",
-        responses: {
-          "200": {
-            description: "Incremented counter state",
-          },
-        },
-      },
-    },
     "/api/auth/signup": {
       post: {
         tags: ["Auth"],
