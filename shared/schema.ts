@@ -20,6 +20,12 @@ export const verificationCodeTypeEnum = pgEnum("verification_code_type", [
 export const customerTypeEnum = pgEnum("customer_type", ["person", "company"]);
 export const categoryTypeEnum = pgEnum("category_type", ["income", "expense"]);
 export const transactionTypeEnum = pgEnum("transaction_type", ["income", "expense"]);
+export const invoiceStatusEnum = pgEnum("invoice_status", [
+  "draft",
+  "sent",
+  "paid",
+  "void",
+]);
 
 export const users = pgTable(
   "users",
@@ -185,6 +191,76 @@ export const transactions = pgTable(
       .where(sql`${table.importHash} is not null`),
   }),
 );
+
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id),
+    invoiceNumber: integer("invoice_number").notNull(),
+    status: invoiceStatusEnum("status").notNull().default("draft"),
+    currency: text("currency").notNull(),
+    taxRate: text("tax_rate"),
+    issueDate: timestamp("issue_date", { withTimezone: true }).notNull(),
+    dueDate: timestamp("due_date", { withTimezone: true }),
+    notes: text("notes"),
+    paymentLink: text("payment_link"),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    userIdIndex: index("invoices_user_id_idx").on(table.userId),
+    customerIdIndex: index("invoices_customer_id_idx").on(table.customerId),
+    statusIndex: index("invoices_status_idx").on(table.status),
+    userInvoiceNumberUnique: uniqueIndex("invoices_user_invoice_number_unique").on(
+      table.userId,
+      table.invoiceNumber,
+    ),
+  }),
+);
+
+export const invoiceItems = pgTable(
+  "invoice_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
+    description: text("description").notNull(),
+    quantity: text("quantity").notNull(),
+    unitPrice: bigint("unit_price", { mode: "bigint" }).notNull(),
+    sortOrder: integer("sort_order").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    invoiceIdIndex: index("invoice_items_invoice_id_idx").on(table.invoiceId),
+  }),
+);
+
+export const userInvoiceCounters = pgTable("user_invoice_counters", {
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" })
+    .primaryKey(),
+  lastInvoiceNumber: integer("last_invoice_number").notNull().default(0),
+});
 
 export const counter = pgTable("counter", {
   id: serial("id").primaryKey(),
