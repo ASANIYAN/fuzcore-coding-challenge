@@ -5,6 +5,7 @@ import { authRouter } from "./modules/auth/auth.routes";
 import { categoriesRouter } from "./modules/categories/categories.routes";
 import { counterRouter } from "./modules/counter/counter.routes";
 import { customersRouter } from "./modules/customers/customers.routes";
+import { transactionsRouter } from "./modules/transactions/transactions.routes";
 
 export async function registerRoutes(app: Express) {
   app.get("/docs/openapi.json", (_req, res) => {
@@ -16,4 +17,5 @@ export async function registerRoutes(app: Express) {
   app.use("/api/categories", categoriesRouter);
   app.use("/api/counter", counterRouter);
   app.use("/api/customers", customersRouter);
+  app.use("/api/transactions", transactionsRouter);
 }

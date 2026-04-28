@@ -1,4 +1,5 @@
 import {
+  bigint,
   integer,
   pgEnum,
   pgTable,
@@ -18,6 +19,7 @@ export const verificationCodeTypeEnum = pgEnum("verification_code_type", [
 
 export const customerTypeEnum = pgEnum("customer_type", ["person", "company"]);
 export const categoryTypeEnum = pgEnum("category_type", ["income", "expense"]);
+export const transactionTypeEnum = pgEnum("transaction_type", ["income", "expense"]);
 
 export const users = pgTable(
   "users",
@@ -140,6 +142,47 @@ export const categories = pgTable(
       table.name,
       table.type,
     ),
+  }),
+);
+
+export const transactions = pgTable(
+  "transactions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    customerId: uuid("customer_id").references(() => customers.id, {
+      onDelete: "set null",
+    }),
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => categories.id),
+    type: transactionTypeEnum("type").notNull(),
+    amount: bigint("amount", { mode: "bigint" }).notNull(),
+    currency: text("currency").notNull(),
+    description: text("description"),
+    reference: text("reference"),
+    importHash: text("import_hash"),
+    transactionDate: timestamp("transaction_date", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+  },
+  (table) => ({
+    userIdIndex: index("transactions_user_id_idx").on(table.userId),
+    customerIdIndex: index("transactions_customer_id_idx").on(table.customerId),
+    categoryIdIndex: index("transactions_category_id_idx").on(table.categoryId),
+    transactionDateIndex: index("transactions_transaction_date_idx").on(
+      table.transactionDate,
+    ),
+    userImportHashUnique: uniqueIndex("transactions_user_import_hash_unique")
+      .on(table.userId, table.importHash)
+      .where(sql`${table.importHash} is not null`),
   }),
 );
 
