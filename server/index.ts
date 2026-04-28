@@ -2,6 +2,8 @@ import { createServer } from "http";
 import { createApp } from "./app";
 import { env } from "./lib/env";
 import { logger } from "./lib/logger";
+import { getRedisClient } from "./lib/redis";
+import { startEmailWorker } from "./workers/email.worker";
 
 let httpServer = createServer();
 
@@ -79,6 +81,12 @@ async function startServer(port: number) {
 }
 
 (async () => {
+  const redis = getRedisClient();
+  await redis.ping();
+  logger.info("redis connected");
+
+  startEmailWorker();
+
   const app = await createApp();
   httpServer = createServer(app);
 
