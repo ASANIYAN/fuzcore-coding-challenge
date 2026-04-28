@@ -41,9 +41,7 @@ export const users = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => ({
-    emailUnique: uniqueIndex("users_email_unique").on(table.email),
-  }),
+  (table) => [uniqueIndex("users_email_unique").on(table.email)],
 );
 
 export const sessions = pgTable(
@@ -60,9 +58,7 @@ export const sessions = pgTable(
     lastActiveAt: timestamp("last_active_at", { withTimezone: true }).notNull(),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
   },
-  (table) => ({
-    userIdIndex: index("sessions_user_id_idx").on(table.userId),
-  }),
+  (table) => [index("sessions_user_id_idx").on(table.userId)],
 );
 
 export const verificationCodes = pgTable(
@@ -81,12 +77,9 @@ export const verificationCodes = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => ({
-    userTypeIndex: index("verification_codes_user_type_idx").on(
-      table.userId,
-      table.type,
-    ),
-  }),
+  (table) => [
+    index("verification_codes_user_type_idx").on(table.userId, table.type),
+  ],
 );
 
 export const customers = pgTable(
@@ -116,12 +109,12 @@ export const customers = pgTable(
       .notNull(),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
   },
-  (table) => ({
-    userIdIndex: index("customers_user_id_idx").on(table.userId),
-    userEmailUnique: uniqueIndex("customers_user_email_unique")
+  (table) => [
+    index("customers_user_id_idx").on(table.userId),
+    uniqueIndex("customers_user_email_unique")
       .on(table.userId, table.email)
       .where(sql`${table.email} is not null`),
-  }),
+  ],
 );
 
 export const categories = pgTable(
@@ -141,14 +134,14 @@ export const categories = pgTable(
       .notNull(),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
   },
-  (table) => ({
-    userIdIndex: index("categories_user_id_idx").on(table.userId),
-    userNameTypeUnique: uniqueIndex("categories_user_name_type_unique").on(
+  (table) => [
+    index("categories_user_id_idx").on(table.userId),
+    uniqueIndex("categories_user_name_type_unique").on(
       table.userId,
       table.name,
       table.type,
     ),
-  }),
+  ],
 );
 
 export const transactions = pgTable(
@@ -179,17 +172,15 @@ export const transactions = pgTable(
       .notNull(),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
   },
-  (table) => ({
-    userIdIndex: index("transactions_user_id_idx").on(table.userId),
-    customerIdIndex: index("transactions_customer_id_idx").on(table.customerId),
-    categoryIdIndex: index("transactions_category_id_idx").on(table.categoryId),
-    transactionDateIndex: index("transactions_transaction_date_idx").on(
-      table.transactionDate,
-    ),
-    userImportHashUnique: uniqueIndex("transactions_user_import_hash_unique")
+  (table) => [
+    index("transactions_user_id_idx").on(table.userId),
+    index("transactions_customer_id_idx").on(table.customerId),
+    index("transactions_category_id_idx").on(table.categoryId),
+    index("transactions_transaction_date_idx").on(table.transactionDate),
+    uniqueIndex("transactions_user_import_hash_unique")
       .on(table.userId, table.importHash)
       .where(sql`${table.importHash} is not null`),
-  }),
+  ],
 );
 
 export const invoices = pgTable(
@@ -220,15 +211,15 @@ export const invoices = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => ({
-    userIdIndex: index("invoices_user_id_idx").on(table.userId),
-    customerIdIndex: index("invoices_customer_id_idx").on(table.customerId),
-    statusIndex: index("invoices_status_idx").on(table.status),
-    userInvoiceNumberUnique: uniqueIndex("invoices_user_invoice_number_unique").on(
+  (table) => [
+    index("invoices_user_id_idx").on(table.userId),
+    index("invoices_customer_id_idx").on(table.customerId),
+    index("invoices_status_idx").on(table.status),
+    uniqueIndex("invoices_user_invoice_number_unique").on(
       table.userId,
       table.invoiceNumber,
     ),
-  }),
+  ],
 );
 
 export const invoiceItems = pgTable(
@@ -249,9 +240,7 @@ export const invoiceItems = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => ({
-    invoiceIdIndex: index("invoice_items_invoice_id_idx").on(table.invoiceId),
-  }),
+  (table) => [index("invoice_items_invoice_id_idx").on(table.invoiceId)],
 );
 
 export const userInvoiceCounters = pgTable("user_invoice_counters", {
