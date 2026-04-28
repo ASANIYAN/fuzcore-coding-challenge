@@ -40,6 +40,12 @@ export class ValidationError extends AppError {
   }
 }
 
+export class BadRequestError extends AppError {
+  constructor(message: string) {
+    super("BAD_REQUEST", message, 400);
+  }
+}
+
 export class NotImplementedError extends AppError {
   constructor(message = "Not implemented") {
     super("NOT_IMPLEMENTED", message, 501);

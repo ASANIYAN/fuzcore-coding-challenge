@@ -10,14 +10,20 @@ export type EmailJobPayload = {
 
 export const EMAIL_QUEUE_NAME = "email-jobs";
 
-const queueConnection = getRedisClient();
+let emailQueue: Queue<EmailJobPayload> | null = null;
 
-export const emailQueue = new Queue<EmailJobPayload>(EMAIL_QUEUE_NAME, {
-  connection: queueConnection,
-});
+export function getEmailQueue() {
+  if (!emailQueue) {
+    emailQueue = new Queue<EmailJobPayload>(EMAIL_QUEUE_NAME, {
+      connection: getRedisClient(),
+    });
+  }
+
+  return emailQueue;
+}
 
 export function enqueueEmailJob(payload: EmailJobPayload) {
-  return emailQueue.add("send-email", payload, {
+  return getEmailQueue().add("send-email", payload, {
     attempts: 3,
     removeOnComplete: 100,
     removeOnFail: 200,
