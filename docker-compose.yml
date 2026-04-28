@@ -40,6 +40,10 @@ services:
       PORT: 5000
       HOST: 0.0.0.0
       REDIS_URL: redis://redis:6379
+      HMAC_SECRET: local-dev-hmac-secret-string-min-32
+      SESSION_SECRET: local-dev-session-secret-string-min-32
+      STRIPE_SECRET_KEY: sk_test_local_dev
+      STRIPE_WEBHOOK_SECRET: whsec_local_dev
     ports:
       - "5000:5000"
     depends_on:

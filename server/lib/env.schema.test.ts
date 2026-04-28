@@ -5,6 +5,10 @@ import { parseEnv } from "./env.schema";
 const baseEnv = {
   DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/challenge",
   REDIS_URL: "redis://localhost:6379",
+  HMAC_SECRET: "12345678901234567890123456789012",
+  SESSION_SECRET: "abcdefghijklmnopqrstuvwxyz123456",
+  STRIPE_SECRET_KEY: "sk_test_123",
+  STRIPE_WEBHOOK_SECRET: "whsec_test_123",
 };
 
 test("parseEnv applies defaults for NODE_ENV and PORT", () => {

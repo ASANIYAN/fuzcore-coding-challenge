@@ -36,6 +36,8 @@ const optionalPort = z.preprocess(
 export const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   REDIS_URL: z.string().url(),
+  HMAC_SECRET: z.string().min(32),
+  SESSION_SECRET: z.string().min(32),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   PORT: z.coerce.number().int().min(1).max(65535).default(5000),
   HOST: optionalString,
@@ -45,7 +47,8 @@ export const envSchema = z.object({
   MAIL_USER: optionalString,
   MAIL_PASS: optionalString,
   MAIL_FROM: optionalString,
-  HMAC_SECRET: optionalString,
+  STRIPE_SECRET_KEY: z.string().min(1),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1),
 });
 
 export const dbEnvSchema = envSchema.pick({
