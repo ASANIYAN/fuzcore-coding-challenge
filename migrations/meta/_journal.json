@@ -29,6 +29,13 @@
       "when": 1777426500000,
       "tag": "0003_drop_customers_archived_at",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777447286799,
+      "tag": "0004_fat_baron_zemo",
+      "breakpoints": true
     }
   ]
 }
