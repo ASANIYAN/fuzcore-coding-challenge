@@ -24,7 +24,7 @@ export const createTransactionSchema = z.object({
   description: z.string().trim().optional().nullable(),
   reference: z.string().trim().optional().nullable(),
   transactionDate: z.coerce.date(),
-});
+}).strict();
 
 export const updateTransactionSchema = z
   .object({
@@ -36,6 +36,7 @@ export const updateTransactionSchema = z
     reference: z.string().trim().optional().nullable(),
     transactionDate: z.coerce.date().optional(),
   })
+  .strict()
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one field is required",
   });

@@ -36,3 +36,19 @@ test("updateTransactionSchema requires at least one field", () => {
   const result = updateTransactionSchema.safeParse({});
   assert.equal(result.success, false);
 });
+
+test("transaction schemas reject client-supplied type", () => {
+  const createResult = createTransactionSchema.safeParse({
+    categoryId: "550e8400-e29b-41d4-a716-446655440000",
+    amount: 99.99,
+    currency: "USD",
+    transactionDate: new Date().toISOString(),
+    type: "income",
+  });
+  assert.equal(createResult.success, false);
+
+  const updateResult = updateTransactionSchema.safeParse({
+    type: "expense",
+  });
+  assert.equal(updateResult.success, false);
+});

@@ -74,6 +74,7 @@ export function enqueueTransactionImportJob(payload: TransactionImportJobPayload
     backoff: {
       type: "exponential",
       delay: 1000,
+      jitter: 0.5,
     },
   });
 }

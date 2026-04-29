@@ -37,6 +37,15 @@ function parseMultipartCsv(
       continue;
     }
 
+    const nameMatch = dispositionLine.match(/name=([^;]+)/i);
+    if (!nameMatch) {
+      continue;
+    }
+    const fieldName = normalizeFilename(nameMatch[1] ?? "");
+    if (fieldName !== "file") {
+      continue;
+    }
+
     const filenameMatch = dispositionLine.match(/filename=([^;]+)/i);
     if (!filenameMatch) {
       continue;
@@ -85,4 +94,3 @@ export function csvUploadMiddleware(req: Request, _res: Response, next: NextFunc
     return next(error);
   }
 }
-

@@ -345,6 +345,8 @@ export const openApiDocument = {
       TransactionImportRequest: {
         type: "object",
         required: ["file"],
+        description:
+          "Multipart upload with a single CSV file field named `file`.",
         example: {
           file: "(binary csv file)",
         },
@@ -1048,7 +1050,7 @@ export const openApiDocument = {
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
         responses: {
           "200": {
-            description: "Transaction archived",
+            description: "Transaction deleted",
             content: {
               "application/json": {
                 schema: successEnvelopeNoMeta("#/components/schemas/GenericMessage"),
@@ -1080,6 +1082,30 @@ export const openApiDocument = {
               },
             },
           },
+          "400": {
+            description: "Invalid multipart request or CSV file",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorEnvelope" },
+              },
+            },
+          },
+          "401": {
+            description: "Unauthorized",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorEnvelope" },
+              },
+            },
+          },
+          "409": {
+            description: "Active import already in progress",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorEnvelope" },
+              },
+            },
+          },
         },
       },
     },
@@ -1097,6 +1123,22 @@ export const openApiDocument = {
             content: {
               "application/json": {
                 schema: successEnvelopeNoMeta("#/components/schemas/ImportJobStatus"),
+              },
+            },
+          },
+          "401": {
+            description: "Unauthorized",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorEnvelope" },
+              },
+            },
+          },
+          "404": {
+            description: "Import job not found",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorEnvelope" },
               },
             },
           },
