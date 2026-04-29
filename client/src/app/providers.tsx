@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { RouterProvider } from "react-router-dom";
@@ -9,6 +9,8 @@ import {
   registerSessionNavigator,
   registerSessionQueryClient,
 } from "@/modules/system/session/session-runtime";
+import { CURRENCIES_QUERY_KEY } from "@/modules/currencies/hooks/use-currencies";
+import { unauthApi } from "@/services/api-service";
 
 type ProvidersProps = { children?: ReactNode };
 
@@ -32,6 +34,19 @@ export default function Providers({ children }: ProvidersProps) {
   registerSessionNavigator((to, options) => {
     void router.navigate(to, { replace: options?.replace });
   });
+
+  useEffect(() => {
+    void queryClient.prefetchQuery({
+      queryKey: CURRENCIES_QUERY_KEY,
+      queryFn: async () => {
+        const response = await unauthApi.get<{
+          success: true;
+          data: Array<{ code: string; name: string; symbol: string }>;
+        }>("/currencies");
+        return response.data.data;
+      },
+    });
+  }, [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>
