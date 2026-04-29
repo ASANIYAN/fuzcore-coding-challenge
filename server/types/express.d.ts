@@ -11,5 +11,9 @@ declare module "express-serve-static-core" {
     requestId: string;
     user?: AuthenticatedUser;
     sessionId?: string;
+    uploadedCsv?: {
+      filename: string;
+      content: string;
+    };
   }
 }

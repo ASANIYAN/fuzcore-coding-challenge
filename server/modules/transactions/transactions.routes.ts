@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { requireAuth } from "../../middleware/auth.middleware";
+import { csvUploadMiddleware } from "../../middleware/csv-upload.middleware";
 import { rateLimit } from "../../middleware/rate-limit.middleware";
 import { validate } from "../../middleware/validate.middleware";
 import { TransactionsController } from "./transactions.controller";
 import { TransactionsService } from "./transactions.service";
 import {
   createTransactionSchema,
-  importTransactionsSchema,
   updateTransactionSchema,
 } from "./transactions.schema";
 
@@ -15,6 +15,8 @@ const transactionsController = new TransactionsController(transactionsService);
 
 export const transactionsRouter = Router();
 
+transactionsRouter.get("/import/sample", transactionsController.downloadSampleCsv);
+
 transactionsRouter.use(requireAuth, rateLimit("standard-user-minute"));
 
 transactionsRouter.get("/", transactionsController.listTransactions);
@@ -22,9 +24,10 @@ transactionsRouter.get("/:id", transactionsController.getTransaction);
 transactionsRouter.post(
   "/import",
   rateLimit("moderate-user-hourly"),
-  validate(importTransactionsSchema),
+  csvUploadMiddleware,
   transactionsController.queueImportTransactions,
 );
+transactionsRouter.get("/import/:jobId", transactionsController.getImportStatus);
 transactionsRouter.post(
   "/",
   validate(createTransactionSchema),

@@ -62,7 +62,6 @@ test("createTransaction throws for invalid category", async () => {
   await assert.rejects(
     service.createTransaction("user-id", {
       categoryId: "550e8400-e29b-41d4-a716-446655440000",
-      type: "income",
       amount: 10,
       currency: "USD",
       transactionDate: new Date(),

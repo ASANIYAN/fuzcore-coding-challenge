@@ -9,7 +9,6 @@ import {
 test("createTransactionSchema accepts valid payload", () => {
   const result = createTransactionSchema.safeParse({
     categoryId: "550e8400-e29b-41d4-a716-446655440000",
-    type: "income",
     amount: 99.99,
     currency: "USD",
     transactionDate: new Date().toISOString(),
@@ -20,7 +19,6 @@ test("createTransactionSchema accepts valid payload", () => {
 test("createTransactionSchema rejects invalid currency", () => {
   const result = createTransactionSchema.safeParse({
     categoryId: "550e8400-e29b-41d4-a716-446655440000",
-    type: "income",
     amount: 99.99,
     currency: "usd",
     transactionDate: new Date().toISOString(),

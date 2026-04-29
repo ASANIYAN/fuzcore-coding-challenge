@@ -310,11 +310,10 @@ export const openApiDocument = {
       },
       CreateTransactionRequest: {
         type: "object",
-        required: ["categoryId", "type", "amount", "currency", "transactionDate"],
+        required: ["categoryId", "amount", "currency", "transactionDate"],
         example: {
           customerId: "1f8ad7b2-6cb6-4f74-bc57-645cab4e4f56",
           categoryId: "cf682285-9b3f-46db-b5cc-286f3d1cabfb",
-          type: "income",
           amount: 1250.5,
           currency: "USD",
           description: "Project milestone payment",
@@ -324,7 +323,6 @@ export const openApiDocument = {
         properties: {
           customerId: { type: "string", format: "uuid", nullable: true },
           categoryId: { type: "string", format: "uuid" },
-          type: { type: "string", enum: ["income", "expense"] },
           amount: { type: "number", exclusiveMinimum: 0 },
           currency: { type: "string", pattern: "^[A-Z]{3}$" },
           description: { type: "string", nullable: true },
@@ -337,7 +335,6 @@ export const openApiDocument = {
         properties: {
           customerId: { type: "string", format: "uuid", nullable: true },
           categoryId: { type: "string", format: "uuid" },
-          type: { type: "string", enum: ["income", "expense"] },
           amount: { type: "number", exclusiveMinimum: 0 },
           currency: { type: "string", pattern: "^[A-Z]{3}$" },
           description: { type: "string", nullable: true },
@@ -347,25 +344,38 @@ export const openApiDocument = {
       },
       TransactionImportRequest: {
         type: "object",
-        required: ["items"],
+        required: ["file"],
         example: {
-          items: [
-            {
-              categoryId: "cf682285-9b3f-46db-b5cc-286f3d1cabfb",
-              type: "income",
-              amount: 1250.5,
-              currency: "USD",
-              transactionDate: "2026-04-29T10:00:00.000Z",
-            },
-          ],
+          file: "(binary csv file)",
         },
         properties: {
-          items: {
-            type: "array",
-            minItems: 1,
-            maxItems: 500,
-            items: { $ref: "#/components/schemas/CreateTransactionRequest" },
+          file: {
+            type: "string",
+            format: "binary",
           },
+        },
+      },
+      ImportJobStatus: {
+        type: "object",
+        properties: {
+          jobId: { type: "string", format: "uuid" },
+          status: { type: "string", enum: ["pending", "processing", "completed", "failed"] },
+          totalRows: { type: "integer", nullable: true },
+          importedRows: { type: "integer", nullable: true },
+          duplicateRows: { type: "integer", nullable: true },
+          failedRows: { type: "integer", nullable: true },
+          errors: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                row: { type: "integer" },
+                reason: { type: "string" },
+              },
+            },
+          },
+          startedAt: { type: "string", format: "date-time", nullable: true },
+          completedAt: { type: "string", format: "date-time", nullable: true },
         },
       },
       InvoiceItemInput: {
@@ -968,7 +978,7 @@ export const openApiDocument = {
       },
       post: {
         tags: ["Transactions"],
-        summary: "Create transaction",
+        summary: "Create transaction (type inferred from category)",
         security: [{ cookieAuth: [] }],
         requestBody: {
           required: true,
@@ -1009,7 +1019,7 @@ export const openApiDocument = {
       },
       patch: {
         tags: ["Transactions"],
-        summary: "Update transaction",
+        summary: "Update transaction (type inferred from category)",
         security: [{ cookieAuth: [] }],
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
         requestBody: {
@@ -1051,12 +1061,12 @@ export const openApiDocument = {
     "/api/transactions/import": {
       post: {
         tags: ["Transactions"],
-        summary: "Queue bulk transaction import",
+        summary: "Queue CSV transaction import",
         security: [{ cookieAuth: [] }],
         requestBody: {
           required: true,
           content: {
-            "application/json": {
+            "multipart/form-data": {
               schema: { $ref: "#/components/schemas/TransactionImportRequest" },
             },
           },
@@ -1067,6 +1077,44 @@ export const openApiDocument = {
             content: {
               "application/json": {
                 schema: successEnvelopeNoMeta("#/components/schemas/QueuedImportResponse"),
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/transactions/import/{jobId}": {
+      get: {
+        tags: ["Transactions"],
+        summary: "Get transaction import job status",
+        security: [{ cookieAuth: [] }],
+        parameters: [
+          { name: "jobId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        responses: {
+          "200": {
+            description: "Import status fetched",
+            content: {
+              "application/json": {
+                schema: successEnvelopeNoMeta("#/components/schemas/ImportJobStatus"),
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/transactions/import/sample": {
+      get: {
+        tags: ["Transactions"],
+        summary: "Download sample transactions CSV",
+        responses: {
+          "200": {
+            description: "Sample CSV",
+            content: {
+              "text/csv": {
+                schema: {
+                  type: "string",
+                },
               },
             },
           },

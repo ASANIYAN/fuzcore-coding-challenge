@@ -4,11 +4,11 @@ import { paginated } from "../../lib/response";
 import type { TransactionsService } from "./transactions.service";
 import {
   createTransactionSchema,
-  importTransactionsSchema,
+  importJobIdParamSchema,
   listTransactionsQuerySchema,
   transactionIdParamSchema,
   type CreateTransactionInput,
-  type ImportTransactionsInput,
+  type ImportJobIdParam,
   type TransactionIdParam,
   type UpdateTransactionInput,
   updateTransactionSchema,
@@ -108,41 +108,53 @@ export class TransactionsController {
     });
   };
 
-  importTransactions = async (
-    req: Request<unknown, unknown, ImportTransactionsInput>,
-    res: Response,
-  ) => {
-    const bodyResult = importTransactionsSchema.safeParse(req.body);
-    if (!bodyResult.success) {
-      throw new ValidationError(bodyResult.error.issues);
+  queueImportTransactions = async (req: Request, res: Response) => {
+    if (!req.uploadedCsv) {
+      throw new ValidationError([
+        {
+          path: ["file"],
+          message: "CSV file is required",
+        },
+      ]);
     }
 
-    const result = await this.transactionsService.importTransactions(
+    const result = await this.transactionsService.enqueueImport(
       req.user!.id,
-      bodyResult.data,
+      req.uploadedCsv.content,
     );
-    return res.status(201).json({
+
+    return res.status(202).json({
       success: true as const,
       data: result,
     });
   };
 
-  queueImportTransactions = async (
-    req: Request<unknown, unknown, ImportTransactionsInput>,
-    res: Response,
-  ) => {
-    const bodyResult = importTransactionsSchema.safeParse(req.body);
-    if (!bodyResult.success) {
-      throw new ValidationError(bodyResult.error.issues);
+  getImportStatus = async (req: Request<ImportJobIdParam>, res: Response) => {
+    const paramsResult = importJobIdParamSchema.safeParse(req.params);
+    if (!paramsResult.success) {
+      throw new ValidationError(paramsResult.error.issues);
     }
 
-    const result = await this.transactionsService.enqueueImport(
+    const result = await this.transactionsService.getImportStatus(
       req.user!.id,
-      bodyResult.data,
+      paramsResult.data.jobId,
     );
-    return res.status(202).json({
+
+    return res.status(200).json({
       success: true as const,
       data: result,
     });
+  };
+
+  downloadSampleCsv = async (_req: Request, res: Response) => {
+    const csv = [
+      "category,amount,currency,customerEmail,description,reference,transactionDate",
+      "income:Consulting,1500.00,NGN,,Consulting fee for March,INV-0001,2024-01-15",
+      "expense:Office Supplies,250.00,USD,,Office supplies purchase,REC-0042,2024-01-16",
+    ].join("\n");
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", 'attachment; filename="transactions-sample.csv"');
+    return res.status(200).send(csv);
   };
 }

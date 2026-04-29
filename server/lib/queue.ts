@@ -9,19 +9,19 @@ export type EmailJobPayload = {
 };
 
 export type TransactionImportItem = {
-  customerId?: string | null;
-  categoryId: string;
-  type: "income" | "expense";
-  amount: number;
+  category: string;
+  amount: string;
   currency: string;
-  description?: string | null;
-  reference?: string | null;
-  transactionDate: Date;
+  customerEmail?: string;
+  description?: string;
+  reference?: string;
+  transactionDate: string;
 };
 
 export type TransactionImportJobPayload = {
+  jobId: string;
   userId: string;
-  items: TransactionImportItem[];
+  csvContent: string;
 };
 
 export const EMAIL_QUEUE_NAME = "email-jobs";
@@ -67,7 +67,8 @@ export function getTransactionImportQueue() {
 
 export function enqueueTransactionImportJob(payload: TransactionImportJobPayload) {
   return getTransactionImportQueue().add(`import-${payload.userId}`, payload, {
-    attempts: 2,
+    jobId: payload.jobId,
+    attempts: 5,
     removeOnComplete: 100,
     removeOnFail: 200,
     backoff: {

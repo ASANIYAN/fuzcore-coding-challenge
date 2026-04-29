@@ -64,6 +64,13 @@
       "when": 1777449692473,
       "tag": "0008_daily_pete_wisdom",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1777462200000,
+      "tag": "0009_import_jobs_and_status_enum",
+      "breakpoints": true
     }
   ]
 }

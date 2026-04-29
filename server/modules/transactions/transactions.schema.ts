@@ -19,7 +19,6 @@ export const listTransactionsQuerySchema = z.object({
 export const createTransactionSchema = z.object({
   customerId: z.string().uuid().optional().nullable(),
   categoryId: z.string().uuid(),
-  type: z.enum(["income", "expense"]),
   amount: z.number().positive(),
   currency: currencySchema,
   description: z.string().trim().optional().nullable(),
@@ -31,7 +30,6 @@ export const updateTransactionSchema = z
   .object({
     customerId: z.string().uuid().optional().nullable(),
     categoryId: z.string().uuid().optional(),
-    type: z.enum(["income", "expense"]).optional(),
     amount: z.number().positive().optional(),
     currency: currencySchema.optional(),
     description: z.string().trim().optional().nullable(),
@@ -42,12 +40,12 @@ export const updateTransactionSchema = z
     message: "At least one field is required",
   });
 
-export const importTransactionsSchema = z.object({
-  items: z.array(createTransactionSchema).min(1).max(500),
+export const importJobIdParamSchema = z.object({
+  jobId: z.string().uuid(),
 });
 
 export type TransactionIdParam = z.infer<typeof transactionIdParamSchema>;
 export type ListTransactionsQuery = z.infer<typeof listTransactionsQuerySchema>;
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 export type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;
-export type ImportTransactionsInput = z.infer<typeof importTransactionsSchema>;
+export type ImportJobIdParam = z.infer<typeof importJobIdParamSchema>;

@@ -3,6 +3,7 @@ import {
   integer,
   pgEnum,
   pgTable,
+  jsonb,
   text,
   timestamp,
   uuid,
@@ -27,6 +28,12 @@ export const invoiceStatusEnum = pgEnum("invoice_status", [
   "sent",
   "paid",
   "void",
+]);
+export const importJobStatusEnum = pgEnum("import_job_status", [
+  "pending",
+  "processing",
+  "completed",
+  "failed",
 ]);
 
 export const users = pgTable(
@@ -264,4 +271,26 @@ export const processedWebhookEvents = pgTable(
       .notNull(),
   },
   (table) => [uniqueIndex("processed_webhook_events_event_id_unique").on(table.eventId)],
+);
+
+export const importJobs = pgTable(
+  "import_jobs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: importJobStatusEnum("status").notNull().default("pending"),
+    totalRows: integer("total_rows"),
+    importedRows: integer("imported_rows"),
+    duplicateRows: integer("duplicate_rows"),
+    failedRows: integer("failed_rows"),
+    errors: jsonb("errors").$type<Array<{ row: number; reason: string }>>(),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [index("import_jobs_user_status_idx").on(table.userId, table.status)],
 );
