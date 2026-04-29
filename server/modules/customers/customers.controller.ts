@@ -53,7 +53,10 @@ export class CustomersController {
     }
 
     const customer = await this.customersService.createCustomer(req.user!.id, bodyResult.data);
-    return res.status(201).json(success(customer));
+    return res.status(201).json({
+      success: true as const,
+      data: customer,
+    });
   };
 
   updateCustomer = async (

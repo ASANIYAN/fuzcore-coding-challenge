@@ -769,7 +769,7 @@ export const openApiDocument = {
             description: "Customer created",
             content: {
               "application/json": {
-                schema: successEnvelope("#/components/schemas/Customer"),
+                schema: successEnvelopeNoMeta("#/components/schemas/Customer"),
               },
             },
           },
