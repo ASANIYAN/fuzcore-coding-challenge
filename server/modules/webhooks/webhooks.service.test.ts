@@ -45,6 +45,14 @@ function createMockDb(selectRows: unknown[][]) {
     db: {
       select: () => selectBuilder(),
       transaction: async (cb: (trx: typeof tx) => Promise<unknown>) => cb(tx),
+      insert: () => ({
+        values: (values: Record<string, unknown>) => {
+          inserts.push(values);
+          return {
+            onConflictDoNothing: async () => {},
+          };
+        },
+      }),
     },
   };
 }

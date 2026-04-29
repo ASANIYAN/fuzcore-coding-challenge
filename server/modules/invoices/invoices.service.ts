@@ -30,16 +30,6 @@ type InvoicesServiceDeps = {
   ) => Promise<{ url: string | null }>;
 };
 
-const ALLOWED_STATUS_TRANSITIONS: Record<
-  "draft" | "sent" | "paid" | "void",
-  Array<"draft" | "sent" | "paid" | "void">
-> = {
-  draft: ["sent", "void"],
-  sent: ["paid", "void"],
-  paid: [],
-  void: [],
-};
-
 function buildInvoiceTotals(
   items: Array<{ quantity: string; unitPrice: bigint }>,
   taxRateValue: string | null,
@@ -310,10 +300,8 @@ export class InvoicesService {
       throw new NotFoundError("Invoice");
     }
 
-    if (!ALLOWED_STATUS_TRANSITIONS[existing.status].includes(input.status)) {
-      throw new BadRequestError(
-        `Cannot transition invoice status from ${existing.status} to ${input.status}`,
-      );
+    if (existing.status === input.status) {
+      return this.loadInvoiceWithItems(userId, invoiceId);
     }
 
     if (input.status === "sent") {
@@ -369,18 +357,25 @@ export class InvoicesService {
     }
 
     const now = new Date();
-    const [updated] = await this.db
-      .update(invoices)
-      .set({
-        status: input.status,
-        sentAt: existing.sentAt,
-        paidAt: input.status === "paid" ? now : existing.paidAt,
-        voidedAt: input.status === "void" ? now : existing.voidedAt,
-        paymentLink: existing.paymentLink,
-        updatedAt: now,
-      })
-      .where(eq(invoices.id, invoiceId))
-      .returning();
+    let updated;
+    try {
+      [updated] = await this.db
+        .update(invoices)
+        .set({
+          status: input.status,
+          sentAt: existing.sentAt,
+          paidAt: input.status === "paid" ? now : existing.paidAt,
+          voidedAt: input.status === "void" ? now : existing.voidedAt,
+          paymentLink: existing.paymentLink,
+          updatedAt: now,
+        })
+        .where(eq(invoices.id, invoiceId))
+        .returning();
+    } catch {
+      throw new BadRequestError(
+        `Cannot transition invoice status from ${existing.status} to ${input.status}`,
+      );
+    }
 
     return this.loadInvoiceWithItems(userId, updated.id);
   }

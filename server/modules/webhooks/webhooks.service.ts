@@ -108,14 +108,6 @@ export class WebhooksService {
         })
         .where(and(eq(invoices.id, invoice.id), eq(invoices.status, "sent")));
 
-      await tx
-        .insert(processedWebhookEvents)
-        .values({
-          eventId: event.id,
-          eventType: event.type,
-        })
-        .onConflictDoNothing();
-
       return {
         userId: invoice.userId,
         invoiceNumber: invoice.invoiceNumber,
@@ -139,6 +131,14 @@ export class WebhooksService {
         text: `Invoice #${result.invoiceNumber} has been marked as paid.`,
       });
     }
+
+    await this.db
+      .insert(processedWebhookEvents)
+      .values({
+        eventId: event.id,
+        eventType: event.type,
+      })
+      .onConflictDoNothing();
 
     return { received: true };
   }
