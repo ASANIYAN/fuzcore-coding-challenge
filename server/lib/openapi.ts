@@ -1,3 +1,35 @@
+const successEnvelope = (dataSchemaRef: string) => ({
+  type: "object",
+  required: ["success", "data", "meta"],
+  properties: {
+    success: { type: "boolean", enum: [true] },
+    data: { $ref: dataSchemaRef },
+    meta: { type: "object", additionalProperties: true },
+  },
+});
+
+const paginatedEnvelope = (itemSchemaRef: string) => ({
+  type: "object",
+  required: ["success", "data", "meta"],
+  properties: {
+    success: { type: "boolean", enum: [true] },
+    data: {
+      type: "array",
+      items: { $ref: itemSchemaRef },
+    },
+    meta: {
+      type: "object",
+      required: ["page", "limit", "total", "totalPages"],
+      properties: {
+        page: { type: "integer" },
+        limit: { type: "integer" },
+        total: { type: "integer" },
+        totalPages: { type: "integer" },
+      },
+    },
+  },
+});
+
 export const openApiDocument = {
   openapi: "3.0.3",
   info: {
@@ -7,22 +39,470 @@ export const openApiDocument = {
   },
   servers: [{ url: "/" }],
   tags: [
-    { name: "Health" },
     { name: "Auth" },
     { name: "Customers" },
     { name: "Categories" },
-    { name: "Invoices" },
     { name: "Transactions" },
+    { name: "Invoices" },
     { name: "Dashboard" },
     { name: "Webhooks" },
   ],
+  components: {
+    securitySchemes: {
+      cookieAuth: {
+        type: "apiKey",
+        in: "cookie",
+        name: "sid",
+      },
+    },
+    schemas: {
+      ErrorEnvelope: {
+        type: "object",
+        required: ["success", "error"],
+        example: {
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Validation failed",
+            details: [{ path: ["email"], message: "Invalid email" }],
+          },
+        },
+        properties: {
+          success: { type: "boolean", enum: [false] },
+          error: {
+            type: "object",
+            required: ["code", "message", "details"],
+            properties: {
+              code: { type: "string" },
+              message: { type: "string" },
+              details: { type: "array", items: {} },
+            },
+          },
+        },
+      },
+      User: {
+        type: "object",
+        required: ["id", "email", "emailVerifiedAt"],
+        properties: {
+          id: { type: "string", format: "uuid" },
+          email: { type: "string", format: "email" },
+          emailVerifiedAt: { type: "string", format: "date-time", nullable: true },
+        },
+      },
+      AuthMessage: {
+        type: "object",
+        required: ["message"],
+        properties: {
+          message: { type: "string" },
+        },
+      },
+      SignupRequest: {
+        type: "object",
+        required: ["email", "password"],
+        example: {
+          email: "owner@example.com",
+          password: "supersecure123",
+        },
+        properties: {
+          email: { type: "string", format: "email" },
+          password: { type: "string", minLength: 8 },
+        },
+      },
+      VerifyEmailRequest: {
+        type: "object",
+        required: ["email", "code"],
+        example: {
+          email: "owner@example.com",
+          code: "123456",
+        },
+        properties: {
+          email: { type: "string", format: "email" },
+          code: { type: "string", minLength: 4, maxLength: 10 },
+        },
+      },
+      LoginRequest: {
+        type: "object",
+        required: ["email", "password"],
+        example: {
+          email: "owner@example.com",
+          password: "supersecure123",
+        },
+        properties: {
+          email: { type: "string", format: "email" },
+          password: { type: "string", minLength: 8 },
+        },
+      },
+      ForgotPasswordRequest: {
+        type: "object",
+        required: ["email"],
+        example: {
+          email: "owner@example.com",
+        },
+        properties: {
+          email: { type: "string", format: "email" },
+        },
+      },
+      ResetPasswordRequest: {
+        type: "object",
+        required: ["email", "code", "newPassword"],
+        example: {
+          email: "owner@example.com",
+          code: "123456",
+          newPassword: "newsecure123",
+        },
+        properties: {
+          email: { type: "string", format: "email" },
+          code: { type: "string", minLength: 4, maxLength: 10 },
+          newPassword: { type: "string", minLength: 8 },
+        },
+      },
+      Customer: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          userId: { type: "string", format: "uuid" },
+          displayName: { type: "string" },
+          companyName: { type: "string", nullable: true },
+          type: { type: "string", enum: ["person", "company"] },
+          email: { type: "string", format: "email", nullable: true },
+          phone: { type: "string", nullable: true },
+          taxId: { type: "string", nullable: true },
+          addressLine1: { type: "string", nullable: true },
+          addressLine2: { type: "string", nullable: true },
+          city: { type: "string", nullable: true },
+          state: { type: "string", nullable: true },
+          postalCode: { type: "string", nullable: true },
+          country: { type: "string", nullable: true },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+          archivedAt: { type: "string", format: "date-time", nullable: true },
+        },
+      },
+      CreateCustomerRequest: {
+        type: "object",
+        required: ["displayName", "type"],
+        example: {
+          displayName: "Acme Ltd",
+          type: "company",
+          email: "billing@acme.test",
+          phone: "+2348012345678",
+          country: "Nigeria",
+        },
+        properties: {
+          displayName: { type: "string", minLength: 1 },
+          companyName: { type: "string", nullable: true },
+          type: { type: "string", enum: ["person", "company"] },
+          email: { type: "string", format: "email", nullable: true },
+          phone: { type: "string", nullable: true },
+          taxId: { type: "string", nullable: true },
+          addressLine1: { type: "string", nullable: true },
+          addressLine2: { type: "string", nullable: true },
+          city: { type: "string", nullable: true },
+          state: { type: "string", nullable: true },
+          postalCode: { type: "string", nullable: true },
+          country: { type: "string", nullable: true },
+        },
+      },
+      UpdateCustomerRequest: {
+        type: "object",
+        properties: {
+          displayName: { type: "string", minLength: 1 },
+          companyName: { type: "string", nullable: true },
+          type: { type: "string", enum: ["person", "company"] },
+          email: { type: "string", format: "email", nullable: true },
+          phone: { type: "string", nullable: true },
+          taxId: { type: "string", nullable: true },
+          addressLine1: { type: "string", nullable: true },
+          addressLine2: { type: "string", nullable: true },
+          city: { type: "string", nullable: true },
+          state: { type: "string", nullable: true },
+          postalCode: { type: "string", nullable: true },
+          country: { type: "string", nullable: true },
+        },
+      },
+      Category: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          userId: { type: "string", format: "uuid" },
+          name: { type: "string" },
+          type: { type: "string", enum: ["income", "expense"] },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+          archivedAt: { type: "string", format: "date-time", nullable: true },
+        },
+      },
+      CreateCategoryRequest: {
+        type: "object",
+        required: ["name", "type"],
+        example: {
+          name: "Consulting",
+          type: "income",
+        },
+        properties: {
+          name: { type: "string", minLength: 1 },
+          type: { type: "string", enum: ["income", "expense"] },
+        },
+      },
+      UpdateCategoryRequest: {
+        type: "object",
+        required: ["name"],
+        properties: {
+          name: { type: "string", minLength: 1 },
+        },
+      },
+      Transaction: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          userId: { type: "string", format: "uuid" },
+          customerId: { type: "string", format: "uuid", nullable: true },
+          categoryId: { type: "string", format: "uuid" },
+          type: { type: "string", enum: ["income", "expense"] },
+          amount: { type: "string", description: "Minor units string" },
+          currency: { type: "string", pattern: "^[A-Z]{3}$" },
+          description: { type: "string", nullable: true },
+          reference: { type: "string", nullable: true },
+          importHash: { type: "string", nullable: true },
+          transactionDate: { type: "string", format: "date-time" },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+          archivedAt: { type: "string", format: "date-time", nullable: true },
+        },
+      },
+      CreateTransactionRequest: {
+        type: "object",
+        required: ["categoryId", "type", "amount", "currency", "transactionDate"],
+        example: {
+          customerId: "1f8ad7b2-6cb6-4f74-bc57-645cab4e4f56",
+          categoryId: "cf682285-9b3f-46db-b5cc-286f3d1cabfb",
+          type: "income",
+          amount: 1250.5,
+          currency: "USD",
+          description: "Project milestone payment",
+          reference: "INV-2026-0001",
+          transactionDate: "2026-04-29T10:00:00.000Z",
+        },
+        properties: {
+          customerId: { type: "string", format: "uuid", nullable: true },
+          categoryId: { type: "string", format: "uuid" },
+          type: { type: "string", enum: ["income", "expense"] },
+          amount: { type: "number", exclusiveMinimum: 0 },
+          currency: { type: "string", pattern: "^[A-Z]{3}$" },
+          description: { type: "string", nullable: true },
+          reference: { type: "string", nullable: true },
+          importHash: { type: "string", nullable: true },
+          transactionDate: { type: "string", format: "date-time" },
+        },
+      },
+      UpdateTransactionRequest: {
+        type: "object",
+        properties: {
+          customerId: { type: "string", format: "uuid", nullable: true },
+          categoryId: { type: "string", format: "uuid" },
+          type: { type: "string", enum: ["income", "expense"] },
+          amount: { type: "number", exclusiveMinimum: 0 },
+          currency: { type: "string", pattern: "^[A-Z]{3}$" },
+          description: { type: "string", nullable: true },
+          reference: { type: "string", nullable: true },
+          importHash: { type: "string", nullable: true },
+          transactionDate: { type: "string", format: "date-time" },
+        },
+      },
+      TransactionImportRequest: {
+        type: "object",
+        required: ["items"],
+        example: {
+          items: [
+            {
+              categoryId: "cf682285-9b3f-46db-b5cc-286f3d1cabfb",
+              type: "income",
+              amount: 1250.5,
+              currency: "USD",
+              transactionDate: "2026-04-29T10:00:00.000Z",
+            },
+          ],
+        },
+        properties: {
+          items: {
+            type: "array",
+            minItems: 1,
+            maxItems: 500,
+            items: { $ref: "#/components/schemas/CreateTransactionRequest" },
+          },
+        },
+      },
+      InvoiceItemInput: {
+        type: "object",
+        required: ["description", "quantity", "unitPrice", "sortOrder"],
+        properties: {
+          description: { type: "string", minLength: 1 },
+          quantity: { type: "number", exclusiveMinimum: 0 },
+          unitPrice: { type: "number", exclusiveMinimum: 0 },
+          sortOrder: { type: "integer", minimum: 0 },
+        },
+      },
+      InvoiceItem: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          invoiceId: { type: "string", format: "uuid" },
+          description: { type: "string" },
+          quantity: { type: "string" },
+          unitPrice: { type: "string" },
+          sortOrder: { type: "integer" },
+          createdAt: { type: "string", format: "date-time" },
+          updatedAt: { type: "string", format: "date-time" },
+        },
+      },
+      Invoice: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          userId: { type: "string", format: "uuid" },
+          customerId: { type: "string", format: "uuid" },
+          invoiceNumber: { type: "integer" },
+          status: { type: "string", enum: ["draft", "sent", "paid", "void"] },
+          currency: { type: "string" },
+          taxRate: { type: "string", nullable: true },
+          issueDate: { type: "string", format: "date-time" },
+          dueDate: { type: "string", format: "date-time", nullable: true },
+          notes: { type: "string", nullable: true },
+          paymentLink: { type: "string", nullable: true },
+          sentAt: { type: "string", format: "date-time", nullable: true },
+          paidAt: { type: "string", format: "date-time", nullable: true },
+          voidedAt: { type: "string", format: "date-time", nullable: true },
+          subtotal: { type: "string" },
+          taxAmount: { type: "string" },
+          total: { type: "string" },
+          items: {
+            type: "array",
+            items: { $ref: "#/components/schemas/InvoiceItem" },
+          },
+        },
+      },
+      CreateInvoiceRequest: {
+        type: "object",
+        required: ["customerId", "currency", "issueDate", "items"],
+        example: {
+          customerId: "1f8ad7b2-6cb6-4f74-bc57-645cab4e4f56",
+          currency: "USD",
+          taxRate: 7.5,
+          issueDate: "2026-04-29T10:00:00.000Z",
+          dueDate: "2026-05-10T10:00:00.000Z",
+          notes: "Thank you for your business.",
+          items: [
+            {
+              description: "Design services",
+              quantity: 2,
+              unitPrice: 500,
+              sortOrder: 0,
+            },
+          ],
+        },
+        properties: {
+          customerId: { type: "string", format: "uuid" },
+          currency: { type: "string", pattern: "^[A-Z]{3}$" },
+          taxRate: { type: "number", minimum: 0, maximum: 100, nullable: true },
+          issueDate: { type: "string", format: "date-time" },
+          dueDate: { type: "string", format: "date-time", nullable: true },
+          notes: { type: "string", nullable: true },
+          items: {
+            type: "array",
+            minItems: 1,
+            items: { $ref: "#/components/schemas/InvoiceItemInput" },
+          },
+        },
+      },
+      UpdateInvoiceRequest: {
+        type: "object",
+        properties: {
+          customerId: { type: "string", format: "uuid" },
+          taxRate: { type: "number", minimum: 0, maximum: 100, nullable: true },
+          issueDate: { type: "string", format: "date-time" },
+          dueDate: { type: "string", format: "date-time", nullable: true },
+          notes: { type: "string", nullable: true },
+          items: {
+            type: "array",
+            minItems: 1,
+            items: { $ref: "#/components/schemas/InvoiceItemInput" },
+          },
+        },
+      },
+      UpdateInvoiceStatusRequest: {
+        type: "object",
+        required: ["status"],
+        example: {
+          status: "sent",
+        },
+        properties: {
+          status: { type: "string", enum: ["sent", "paid", "void"] },
+        },
+      },
+      DashboardResponseData: {
+        type: "object",
+        additionalProperties: true,
+      },
+      GenericMessage: {
+        type: "object",
+        properties: {
+          message: { type: "string" },
+        },
+      },
+      QueuedImportResponse: {
+        type: "object",
+        example: {
+          jobId: "123",
+          message: "Transaction import queued.",
+        },
+        properties: {
+          jobId: { oneOf: [{ type: "string" }, { type: "number" }, { type: "null" }] },
+          message: { type: "string" },
+        },
+      },
+      PaymentLinkResponse: {
+        type: "object",
+        example: {
+          paymentLink: "https://checkout.stripe.com/c/pay/cs_test_123",
+        },
+        properties: {
+          paymentLink: { type: "string" },
+        },
+      },
+      WebhookAck: {
+        type: "object",
+        example: {
+          received: true,
+        },
+        properties: {
+          received: { type: "boolean" },
+        },
+      },
+    },
+  },
   paths: {
     "/api/auth/signup": {
       post: {
         tags: ["Auth"],
         summary: "Register user and dispatch verification code",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/SignupRequest" },
+            },
+          },
+        },
         responses: {
-          "201": { description: "Signup accepted" },
+          "201": {
+            description: "Signup accepted",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/AuthMessage"),
+              },
+            },
+          },
+          "400": { description: "Validation error" },
           "409": { description: "Conflict" },
         },
       },
@@ -31,8 +511,23 @@ export const openApiDocument = {
       post: {
         tags: ["Auth"],
         summary: "Verify user email with OTP",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/VerifyEmailRequest" },
+            },
+          },
+        },
         responses: {
-          "200": { description: "Email verified" },
+          "200": {
+            description: "Email verified",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/AuthMessage"),
+              },
+            },
+          },
           "400": { description: "Invalid verification code" },
         },
       },
@@ -41,8 +536,23 @@ export const openApiDocument = {
       post: {
         tags: ["Auth"],
         summary: "Login user and create session",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/LoginRequest" },
+            },
+          },
+        },
         responses: {
-          "200": { description: "Login successful" },
+          "200": {
+            description: "Login successful",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/AuthMessage"),
+              },
+            },
+          },
           "401": { description: "Unauthorized" },
         },
       },
@@ -51,8 +561,65 @@ export const openApiDocument = {
       post: {
         tags: ["Auth"],
         summary: "Logout user and revoke current session",
+        security: [{ cookieAuth: [] }],
         responses: {
-          "200": { description: "Logout successful" },
+          "200": {
+            description: "Logout successful",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/AuthMessage"),
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/auth/forgot-password": {
+      post: {
+        tags: ["Auth"],
+        summary: "Request password reset OTP",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/ForgotPasswordRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "OTP dispatch accepted",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/AuthMessage"),
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/auth/reset-password": {
+      post: {
+        tags: ["Auth"],
+        summary: "Reset password with OTP",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/ResetPasswordRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Password reset successful",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/AuthMessage"),
+              },
+            },
+          },
+          "400": { description: "Invalid OTP" },
         },
       },
     },
@@ -60,16 +627,45 @@ export const openApiDocument = {
       get: {
         tags: ["Customers"],
         summary: "List customers",
+        security: [{ cookieAuth: [] }],
+        parameters: [
+          { name: "page", in: "query", schema: { type: "integer", minimum: 1 } },
+          { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 100 } },
+          { name: "search", in: "query", schema: { type: "string" } },
+          { name: "type", in: "query", schema: { type: "string", enum: ["person", "company"] } },
+        ],
         responses: {
-          "200": { description: "Customers fetched" },
+          "200": {
+            description: "Customers fetched",
+            content: {
+              "application/json": {
+                schema: paginatedEnvelope("#/components/schemas/Customer"),
+              },
+            },
+          },
         },
       },
       post: {
         tags: ["Customers"],
         summary: "Create customer",
+        security: [{ cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateCustomerRequest" },
+            },
+          },
+        },
         responses: {
-          "201": { description: "Customer created" },
-          "400": { description: "Validation error" },
+          "201": {
+            description: "Customer created",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/Customer"),
+              },
+            },
+          },
         },
       },
     },
@@ -77,26 +673,58 @@ export const openApiDocument = {
       get: {
         tags: ["Customers"],
         summary: "Get customer by id",
-        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
         responses: {
-          "200": { description: "Customer fetched" },
+          "200": {
+            description: "Customer fetched",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/Customer"),
+              },
+            },
+          },
           "404": { description: "Not found" },
         },
       },
       patch: {
         tags: ["Customers"],
         summary: "Update customer",
-        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/UpdateCustomerRequest" },
+            },
+          },
+        },
         responses: {
-          "200": { description: "Customer updated" },
+          "200": {
+            description: "Customer updated",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/Customer"),
+              },
+            },
+          },
         },
       },
       delete: {
         tags: ["Customers"],
         summary: "Archive customer",
-        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
         responses: {
-          "200": { description: "Customer archived" },
+          "200": {
+            description: "Customer archived",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/GenericMessage"),
+              },
+            },
+          },
         },
       },
     },
@@ -104,15 +732,42 @@ export const openApiDocument = {
       get: {
         tags: ["Categories"],
         summary: "List categories",
+        security: [{ cookieAuth: [] }],
+        parameters: [
+          { name: "type", in: "query", schema: { type: "string", enum: ["income", "expense"] } },
+        ],
         responses: {
-          "200": { description: "Categories fetched" },
+          "200": {
+            description: "Categories fetched",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/Category"),
+              },
+            },
+          },
         },
       },
       post: {
         tags: ["Categories"],
         summary: "Create category",
+        security: [{ cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateCategoryRequest" },
+            },
+          },
+        },
         responses: {
-          "201": { description: "Category created" },
+          "201": {
+            description: "Category created",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/Category"),
+              },
+            },
+          },
         },
       },
     },
@@ -120,25 +775,57 @@ export const openApiDocument = {
       get: {
         tags: ["Categories"],
         summary: "Get category by id",
-        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
         responses: {
-          "200": { description: "Category fetched" },
+          "200": {
+            description: "Category fetched",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/Category"),
+              },
+            },
+          },
         },
       },
       patch: {
         tags: ["Categories"],
         summary: "Update category",
-        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/UpdateCategoryRequest" },
+            },
+          },
+        },
         responses: {
-          "200": { description: "Category updated" },
+          "200": {
+            description: "Category updated",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/Category"),
+              },
+            },
+          },
         },
       },
       delete: {
         tags: ["Categories"],
         summary: "Archive category",
-        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
         responses: {
-          "200": { description: "Category archived" },
+          "200": {
+            description: "Category archived",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/GenericMessage"),
+              },
+            },
+          },
         },
       },
     },
@@ -146,15 +833,48 @@ export const openApiDocument = {
       get: {
         tags: ["Transactions"],
         summary: "List transactions",
+        security: [{ cookieAuth: [] }],
+        parameters: [
+          { name: "page", in: "query", schema: { type: "integer", minimum: 1 } },
+          { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 100 } },
+          { name: "type", in: "query", schema: { type: "string", enum: ["income", "expense"] } },
+          { name: "categoryId", in: "query", schema: { type: "string", format: "uuid" } },
+          { name: "customerId", in: "query", schema: { type: "string", format: "uuid" } },
+          { name: "startDate", in: "query", schema: { type: "string", format: "date-time" } },
+          { name: "endDate", in: "query", schema: { type: "string", format: "date-time" } },
+        ],
         responses: {
-          "200": { description: "Transactions fetched" },
+          "200": {
+            description: "Transactions fetched",
+            content: {
+              "application/json": {
+                schema: paginatedEnvelope("#/components/schemas/Transaction"),
+              },
+            },
+          },
         },
       },
       post: {
         tags: ["Transactions"],
         summary: "Create transaction",
+        security: [{ cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateTransactionRequest" },
+            },
+          },
+        },
         responses: {
-          "201": { description: "Transaction created" },
+          "201": {
+            description: "Transaction created",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/Transaction"),
+              },
+            },
+          },
         },
       },
     },
@@ -162,25 +882,200 @@ export const openApiDocument = {
       get: {
         tags: ["Transactions"],
         summary: "Get transaction by id",
-        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
         responses: {
-          "200": { description: "Transaction fetched" },
+          "200": {
+            description: "Transaction fetched",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/Transaction"),
+              },
+            },
+          },
         },
       },
       patch: {
         tags: ["Transactions"],
         summary: "Update transaction",
-        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/UpdateTransactionRequest" },
+            },
+          },
+        },
         responses: {
-          "200": { description: "Transaction updated" },
+          "200": {
+            description: "Transaction updated",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/Transaction"),
+              },
+            },
+          },
         },
       },
       delete: {
         tags: ["Transactions"],
         summary: "Archive transaction",
-        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
         responses: {
-          "200": { description: "Transaction archived" },
+          "200": {
+            description: "Transaction archived",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/GenericMessage"),
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/transactions/import": {
+      post: {
+        tags: ["Transactions"],
+        summary: "Queue bulk transaction import",
+        security: [{ cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/TransactionImportRequest" },
+            },
+          },
+        },
+        responses: {
+          "202": {
+            description: "Import queued",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/QueuedImportResponse"),
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/invoices": {
+      get: {
+        tags: ["Invoices"],
+        summary: "List invoices",
+        security: [{ cookieAuth: [] }],
+        parameters: [
+          { name: "page", in: "query", schema: { type: "integer", minimum: 1 } },
+          { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 100 } },
+          { name: "status", in: "query", schema: { type: "string", enum: ["draft", "sent", "paid", "void"] } },
+          { name: "customerId", in: "query", schema: { type: "string", format: "uuid" } },
+          { name: "from", in: "query", schema: { type: "string", format: "date-time" } },
+          { name: "to", in: "query", schema: { type: "string", format: "date-time" } },
+        ],
+        responses: {
+          "200": {
+            description: "Invoices fetched",
+            content: {
+              "application/json": {
+                schema: paginatedEnvelope("#/components/schemas/Invoice"),
+              },
+            },
+          },
+        },
+      },
+      post: {
+        tags: ["Invoices"],
+        summary: "Create invoice",
+        security: [{ cookieAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/CreateInvoiceRequest" },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Invoice created",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/Invoice"),
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/invoices/{id}": {
+      get: {
+        tags: ["Invoices"],
+        summary: "Get invoice by id",
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: {
+          "200": {
+            description: "Invoice fetched",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/Invoice"),
+              },
+            },
+          },
+          "404": { description: "Not found" },
+        },
+      },
+      patch: {
+        tags: ["Invoices"],
+        summary: "Update invoice",
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/UpdateInvoiceRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Invoice updated",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/Invoice"),
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/invoices/{id}/status": {
+      post: {
+        tags: ["Invoices"],
+        summary: "Transition invoice status",
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/UpdateInvoiceStatusRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Invoice status updated",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/Invoice"),
+              },
+            },
+          },
+          "400": { description: "Invalid transition" },
         },
       },
     },
@@ -188,9 +1083,17 @@ export const openApiDocument = {
       post: {
         tags: ["Invoices"],
         summary: "Create Stripe payment link for a sent invoice",
-        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
         responses: {
-          "200": { description: "Payment link returned" },
+          "200": {
+            description: "Payment link returned",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/PaymentLinkResponse"),
+              },
+            },
+          },
           "400": { description: "Invalid invoice state" },
         },
       },
@@ -199,76 +1102,21 @@ export const openApiDocument = {
       get: {
         tags: ["Invoices"],
         summary: "Generate invoice PDF",
-        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        security: [{ cookieAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
         responses: {
-          "200": { description: "PDF stream" },
+          "200": {
+            description: "PDF stream",
+            content: {
+              "application/pdf": {
+                schema: {
+                  type: "string",
+                  format: "binary",
+                },
+              },
+            },
+          },
           "404": { description: "Invoice not found" },
-        },
-      },
-    },
-    "/api/invoices": {
-      get: {
-        tags: ["Invoices"],
-        summary: "List invoices",
-        responses: {
-          "200": { description: "Invoices fetched" },
-        },
-      },
-      post: {
-        tags: ["Invoices"],
-        summary: "Create invoice",
-        responses: {
-          "201": { description: "Invoice created" },
-        },
-      },
-    },
-    "/api/invoices/{id}": {
-      get: {
-        tags: ["Invoices"],
-        summary: "Get invoice by id",
-        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
-        responses: {
-          "200": { description: "Invoice fetched" },
-          "404": { description: "Not found" },
-        },
-      },
-      patch: {
-        tags: ["Invoices"],
-        summary: "Update invoice",
-        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
-        responses: {
-          "200": { description: "Invoice updated" },
-        },
-      },
-    },
-    "/api/invoices/{id}/status": {
-      post: {
-        tags: ["Invoices"],
-        summary: "Transition invoice status",
-        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
-        responses: {
-          "200": { description: "Invoice status updated" },
-          "400": { description: "Invalid transition" },
-        },
-      },
-    },
-    "/api/transactions/import": {
-      post: {
-        tags: ["Transactions"],
-        summary: "Queue bulk transaction import",
-        responses: {
-          "202": { description: "Import queued" },
-          "400": { description: "Invalid payload" },
-        },
-      },
-    },
-    "/api/webhooks/stripe": {
-      post: {
-        tags: ["Webhooks"],
-        summary: "Stripe webhook endpoint",
-        responses: {
-          "200": { description: "Webhook acknowledged" },
-          "400": { description: "Invalid signature" },
         },
       },
     },
@@ -276,8 +1124,48 @@ export const openApiDocument = {
       get: {
         tags: ["Dashboard"],
         summary: "Get dashboard aggregates",
+        security: [{ cookieAuth: [] }],
+        parameters: [
+          { name: "from", in: "query", schema: { type: "string", format: "date-time" } },
+          { name: "to", in: "query", schema: { type: "string", format: "date-time" } },
+        ],
         responses: {
-          "200": { description: "Dashboard fetched" },
+          "200": {
+            description: "Dashboard fetched",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/DashboardResponseData"),
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/webhooks/stripe": {
+      post: {
+        tags: ["Webhooks"],
+        summary: "Stripe webhook endpoint",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                additionalProperties: true,
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Webhook acknowledged",
+            content: {
+              "application/json": {
+                schema: successEnvelope("#/components/schemas/WebhookAck"),
+              },
+            },
+          },
+          "400": { description: "Invalid signature" },
         },
       },
     },
