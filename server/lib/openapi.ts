@@ -824,10 +824,10 @@ export const openApiDocument = {
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
         responses: {
           "200": {
-            description: "Customer archived",
+            description: "Customer deleted",
             content: {
               "application/json": {
-                schema: successEnvelope("#/components/schemas/GenericMessage"),
+                schema: successEnvelopeNoMeta("#/components/schemas/GenericMessage"),
               },
             },
           },

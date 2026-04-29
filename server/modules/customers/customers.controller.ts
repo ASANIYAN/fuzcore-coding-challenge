@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { ValidationError } from "../../lib/errors";
-import { paginated, success } from "../../lib/response";
+import { paginated } from "../../lib/response";
 import type { CustomersService } from "./customers.service";
 import {
   createCustomerSchema,
@@ -96,6 +96,9 @@ export class CustomersController {
       req.user!.id,
       paramsResult.data.id,
     );
-    return res.status(200).json(success(result));
+    return res.status(200).json({
+      success: true as const,
+      data: result,
+    });
   };
 }
