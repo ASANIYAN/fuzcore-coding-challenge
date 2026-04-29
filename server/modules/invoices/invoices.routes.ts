@@ -37,3 +37,8 @@ invoicesRouter.post(
   rateLimit("moderate-user-hourly"),
   invoicesController.createPaymentLink,
 );
+invoicesRouter.post(
+  "/:id/resend",
+  rateLimit("invoice-resend-hourly"),
+  invoicesController.resendInvoice,
+);

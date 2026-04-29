@@ -147,6 +147,20 @@ export class InvoicesController {
     return res.status(200).json(success(data));
   };
 
+  resendInvoice = async (req: Request<InvoiceIdParam>, res: Response) => {
+    const paramsResult = invoiceIdParamSchema.safeParse(req.params);
+    if (!paramsResult.success) {
+      throw new ValidationError(paramsResult.error.issues);
+    }
+
+    const data = await this.invoicesService.resendInvoice(
+      req.user!.id,
+      paramsResult.data.id,
+    );
+
+    return res.status(200).json(success(data));
+  };
+
   getInvoicePdf = async (req: Request<InvoiceIdParam>, res: Response) => {
     const paramsResult = invoiceIdParamSchema.safeParse(req.params);
     if (!paramsResult.success) {

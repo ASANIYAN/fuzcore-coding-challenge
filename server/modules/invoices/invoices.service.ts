@@ -2,7 +2,7 @@ import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import PDFDocument from "pdfkit";
 import Stripe from "stripe";
 import { db } from "../../db";
-import { BadRequestError, NotFoundError } from "../../lib/errors";
+import { BadRequestError, ForbiddenError, NotFoundError } from "../../lib/errors";
 import { toDecimal, toMinorUnits } from "../../lib/currency";
 import { env } from "../../lib/env";
 import { enqueueEmailJob } from "../../lib/queue";
@@ -114,6 +114,48 @@ export class InvoicesService {
       email: customer.email,
       displayName: customer.displayName,
     };
+  }
+
+  private buildCustomerInvoiceEmailText(
+    recipientName: string,
+    invoiceNumber: number,
+    invoice: Awaited<ReturnType<InvoicesService["loadInvoiceWithItems"]>>,
+    paymentLink: string,
+  ) {
+    const issueDate = new Date(invoice.issueDate).toISOString().slice(0, 10);
+    const dueDate = invoice.dueDate
+      ? new Date(invoice.dueDate).toISOString().slice(0, 10)
+      : "N/A";
+    const itemLines = invoice.items.map((item, index) => {
+      const quantity = Number(item.quantity);
+      const unitPriceMinor = BigInt(item.unitPrice);
+      const lineTotalMinor = BigInt(
+        Math.round(quantity * Number(unitPriceMinor)),
+      );
+      return `${index + 1}. ${item.description} | Qty: ${
+        item.quantity
+      } | Unit: ${formatMoney(unitPriceMinor, invoice.currency)} | Line Total: ${formatMoney(lineTotalMinor, invoice.currency)}`;
+    });
+
+    return [
+      `Hello ${recipientName},`,
+      "",
+      `Your invoice #${invoiceNumber} is ready.`,
+      `Issue Date: ${issueDate}`,
+      `Due Date: ${dueDate}`,
+      ...(invoice.notes ? [`Notes: ${invoice.notes}`] : []),
+      "",
+      "Invoice Items:",
+      ...itemLines,
+      "",
+      `Subtotal: ${formatMoney(BigInt(invoice.subtotal), invoice.currency)}`,
+      `Tax${invoice.taxRate ? ` (${invoice.taxRate}%)` : ""}: ${formatMoney(BigInt(invoice.taxAmount), invoice.currency)}`,
+      `Total: ${formatMoney(BigInt(invoice.total), invoice.currency)}`,
+      "",
+      `Pay securely here: ${paymentLink}`,
+      "",
+      "Thank you.",
+    ].join("\n");
   }
 
   private async loadInvoiceWithItems(userId: string, invoiceId: string) {
@@ -395,46 +437,13 @@ export class InvoicesService {
       await this.enqueueEmail({
         to: recipient.email,
         subject: `Invoice #${updated.invoiceNumber} from your service provider`,
-        text: (() => {
-          const issueDate = new Date(invoiceWithItems.issueDate)
-            .toISOString()
-            .slice(0, 10);
-          const dueDate = invoiceWithItems.dueDate
-            ? new Date(invoiceWithItems.dueDate).toISOString().slice(0, 10)
-            : "N/A";
-          const itemLines = invoiceWithItems.items.map((item, index) => {
-            const quantity = Number(item.quantity);
-            const unitPriceMinor = BigInt(item.unitPrice);
-            const lineTotalMinor = BigInt(
-              Math.round(quantity * Number(unitPriceMinor)),
-            );
-            return `${index + 1}. ${item.description} | Qty: ${
-              item.quantity
-            } | Unit: ${formatMoney(unitPriceMinor, invoiceWithItems.currency)} | Line Total: ${formatMoney(lineTotalMinor, invoiceWithItems.currency)}`;
-          });
-
-          return [
-            `Hello ${recipient.displayName},`,
-            "",
-            `Your invoice #${updated.invoiceNumber} is ready.`,
-            `Issue Date: ${issueDate}`,
-            `Due Date: ${dueDate}`,
-            ...(invoiceWithItems.notes
-              ? [`Notes: ${invoiceWithItems.notes}`]
-              : []),
-            "",
-            "Invoice Items:",
-            ...itemLines,
-            "",
-            `Subtotal: ${formatMoney(BigInt(invoiceWithItems.subtotal), invoiceWithItems.currency)}`,
-            `Tax${invoiceWithItems.taxRate ? ` (${invoiceWithItems.taxRate}%)` : ""}: ${formatMoney(BigInt(invoiceWithItems.taxAmount), invoiceWithItems.currency)}`,
-            `Total: ${formatMoney(BigInt(invoiceWithItems.total), invoiceWithItems.currency)}`,
-            "",
-            `Pay securely here: ${paymentLink}`,
-            "",
-            "Thank you.",
-          ].join("\n");
-        })(),
+        text: this.buildCustomerInvoiceEmailText(
+          recipient.displayName,
+          updated.invoiceNumber,
+          invoiceWithItems,
+          paymentLink,
+        ),
+        invoiceId: updated.id,
       });
 
       const [owner] = await this.db
@@ -454,6 +463,7 @@ export class InvoicesService {
             `Customer: ${recipient.displayName}`,
             `Customer email: ${recipient.email}`,
           ].join("\n"),
+          invoiceId: updated.id,
         });
       }
 
@@ -511,6 +521,42 @@ export class InvoicesService {
     return {
       paymentLink,
     };
+  }
+
+  async resendInvoice(userId: string, invoiceId: string) {
+    const invoice = await this.loadInvoiceWithItems(userId, invoiceId);
+    if (invoice.status === "paid") {
+      throw new ForbiddenError(
+        "Invoice has already been paid and cannot be resent",
+      );
+    }
+    if (invoice.status === "draft" || invoice.status === "void") {
+      throw new ForbiddenError("Only sent invoices can be resent");
+    }
+
+    const recipient = await this.getCustomerRecipientEmail(
+      userId,
+      invoice.customerId,
+    );
+    if (!invoice.paymentLink) {
+      throw new BadRequestError(
+        "Invoice payment link is missing; send the invoice first",
+      );
+    }
+
+    await this.enqueueEmail({
+      to: recipient.email,
+      subject: `Invoice #${invoice.invoiceNumber} from your service provider`,
+      text: this.buildCustomerInvoiceEmailText(
+        recipient.displayName,
+        invoice.invoiceNumber,
+        invoice,
+        invoice.paymentLink,
+      ),
+      invoiceId: invoice.id,
+    });
+
+    return { message: "Invoice resent successfully." };
   }
 
   private async createStripePaymentLinkForInvoice(

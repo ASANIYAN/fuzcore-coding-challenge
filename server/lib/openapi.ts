@@ -1340,6 +1340,43 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/invoices/{id}/resend": {
+      post: {
+        tags: ["Invoices"],
+        summary: "Resend sent invoice email to customer",
+        security: [{ cookieAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Invoice email re-queued",
+            content: {
+              "application/json": {
+                schema: successEnvelopeNoMeta(
+                  "#/components/schemas/GenericMessage",
+                ),
+              },
+            },
+          },
+          "403": {
+            description: "Invoice not in resendable state",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorEnvelope" },
+              },
+            },
+          },
+          "404": { description: "Invoice not found" },
+          "429": { description: "Too many requests" },
+        },
+      },
+    },
     "/api/invoices/{id}/pdf": {
       get: {
         tags: ["Invoices"],

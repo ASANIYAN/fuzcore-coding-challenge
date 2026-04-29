@@ -6,6 +6,7 @@ export type EmailJobPayload = {
   subject: string;
   text: string;
   html?: string;
+  invoiceId?: string;
 };
 
 export type TransactionImportItem = {

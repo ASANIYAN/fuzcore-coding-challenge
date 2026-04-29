@@ -501,6 +501,7 @@ Applied as the first middleware in the Express chain:
 | -------- | --------------------------------------------------------------------------------------- | ---------------------------- |
 | Strict   | All `/auth/*` endpoints                                                                 | 5 requests / IP / 15 minutes |
 | Moderate | `POST /transactions/import`, `GET /invoices/:id/pdf`, `POST /invoices/:id/payment-link` | 20 requests / user / hour    |
+| Moderate | `POST /invoices/:id/resend`                                                             | 10 requests / user / hour    |
 | Standard | All other authenticated endpoints                                                       | 100 requests / user / minute |
 
 ### Additional Measures
@@ -705,6 +706,7 @@ All monetary values are returned as BIGINT with their currency code. Conversion 
 | POST   | `/invoices`            | Creates invoice and all line items atomically in a single DB transaction — succeeds or rolls back entirely. Assigns next sequential `invoice_number`. Invoice starts as `draft`.                                                                                                                                                                   |
 | PATCH  | `/invoices/:id`        | Updates invoice header fields (notes, due date, tax rate etc). Only permitted when status is `draft`.                                                                                                                                                                                                                                              |
 | POST   | `/invoices/:id/status` | Transitions invoice status. Accepts `status` in body. DB trigger validates transition. When transitioning to `sent`: Stripe payment link created first, then DB updated atomically (status + sent_at + payment_link URL), then email job enqueued after commit. If Stripe call fails, DB is never touched and the operation can be safely retried. |
+| POST   | `/invoices/:id/resend` | Re-enqueues the sent-invoice email to the customer using the existing invoice/payment-link payload. Requires auth and invoice ownership. Allowed only when status is `sent`. Rejects with `FORBIDDEN` for `draft`, `paid`, or `void`. For `paid`, return clear message: `Invoice has already been paid and cannot be resent`. Does not mutate invoice state, timestamps, or any DB invoice fields. |
 
 **Query Parameters**
 
@@ -894,6 +896,8 @@ Email sending is an internal side effect, not an endpoint. Triggered by applicat
 Email jobs are enqueued **only after a successful DB commit** — never inside a transaction.
 
 **Retry strategy:** exponential backoff with jitter on failure. Max retry attempts configured per job type. On max retries exceeded, job moves to the failed queue and is logged with full context for manual review.
+
+**Failed job monitoring:** failed email jobs are logged with `invoice_id`, `job_id`, `attempt_count`, and the last error. The failed queue should be monitored and surfaced in an admin-facing monitor or periodic threshold-based alerting process.
 
 **Flow:**
 

@@ -26,6 +26,9 @@ export function startEmailWorker() {
     logger.error(
       {
         jobId: job?.id,
+        invoiceId: job?.data?.invoiceId,
+        attemptCount: job?.attemptsMade,
+        maxAttempts: job?.opts?.attempts,
         err: error,
       },
       "email job failed",
