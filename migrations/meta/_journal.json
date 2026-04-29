@@ -36,6 +36,20 @@
       "when": 1777447286799,
       "tag": "0004_fat_baron_zemo",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1777450200000,
+      "tag": "0005_restore_customers_archived_at_partial_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777448909026,
+      "tag": "0006_orange_invisible_woman",
+      "breakpoints": true
     }
   ]
 }

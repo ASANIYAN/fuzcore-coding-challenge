@@ -75,6 +75,7 @@ export class TransactionsService {
         and(
           eq(customers.id, customerId),
           eq(customers.userId, userId),
+          isNull(customers.archivedAt),
         ),
       )
       .limit(1);

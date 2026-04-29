@@ -1,6 +1,5 @@
 import type { Request, Response } from "express";
 import { ValidationError } from "../../lib/errors";
-import { success } from "../../lib/response";
 import type { CategoriesService } from "./categories.service";
 import {
   categoryIdParamSchema,
@@ -25,7 +24,10 @@ export class CategoriesController {
       req.user!.id,
       queryResult.data,
     );
-    return res.status(200).json(success(categories));
+    return res.status(200).json({
+      success: true as const,
+      data: categories,
+    });
   };
 
   getCategory = async (req: Request<CategoryIdParam>, res: Response) => {
@@ -38,7 +40,10 @@ export class CategoriesController {
       req.user!.id,
       paramsResult.data.id,
     );
-    return res.status(200).json(success(category));
+    return res.status(200).json({
+      success: true as const,
+      data: category,
+    });
   };
 
   createCategory = async (req: Request<unknown, unknown, CreateCategoryInput>, res: Response) => {
@@ -48,7 +53,10 @@ export class CategoriesController {
     }
 
     const category = await this.categoriesService.createCategory(req.user!.id, bodyResult.data);
-    return res.status(201).json(success(category));
+    return res.status(201).json({
+      success: true as const,
+      data: category,
+    });
   };
 
   updateCategory = async (
@@ -69,7 +77,10 @@ export class CategoriesController {
       paramsResult.data.id,
       bodyResult.data,
     );
-    return res.status(200).json(success(category));
+    return res.status(200).json({
+      success: true as const,
+      data: category,
+    });
   };
 
   deleteCategory = async (req: Request<CategoryIdParam>, res: Response) => {
@@ -82,6 +93,9 @@ export class CategoriesController {
       req.user!.id,
       paramsResult.data.id,
     );
-    return res.status(200).json(success(result));
+    return res.status(200).json({
+      success: true as const,
+      data: result,
+    });
   };
 }

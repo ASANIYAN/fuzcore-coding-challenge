@@ -109,12 +109,13 @@ export const customers = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
   },
   (table) => [
     index("customers_user_id_idx").on(table.userId),
     uniqueIndex("customers_user_email_unique")
       .on(table.userId, table.email)
-      .where(sql`${table.email} is not null`),
+      .where(sql`${table.email} is not null and ${table.archivedAt} is null`),
   ],
 );
 

@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { db } from "../../db";
 import { BadRequestError, NotFoundError } from "../../lib/errors";
 import { customers } from "../../../shared/schema";
@@ -22,7 +22,7 @@ export class CustomersService {
   }
 
   async listCustomers(userId: string, query: ListCustomersQuery) {
-    const conditions = [eq(customers.userId, userId)];
+    const conditions = [eq(customers.userId, userId), isNull(customers.archivedAt)];
 
     if (query.type) {
       conditions.push(eq(customers.type, query.type));
@@ -66,6 +66,7 @@ export class CustomersService {
         and(
           eq(customers.id, customerId),
           eq(customers.userId, userId),
+          isNull(customers.archivedAt),
         ),
       )
       .limit(1);
@@ -113,6 +114,7 @@ export class CustomersService {
         and(
           eq(customers.id, customerId),
           eq(customers.userId, userId),
+          isNull(customers.archivedAt),
         ),
       )
       .returning();
@@ -125,12 +127,18 @@ export class CustomersService {
   }
 
   async deleteCustomer(userId: string, customerId: string) {
+    const now = new Date();
     const [customer] = await this.db
-      .delete(customers)
+      .update(customers)
+      .set({
+        archivedAt: now,
+        updatedAt: now,
+      })
       .where(
         and(
           eq(customers.id, customerId),
           eq(customers.userId, userId),
+          isNull(customers.archivedAt),
         ),
       )
       .returning({

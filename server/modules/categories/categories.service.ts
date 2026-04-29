@@ -1,6 +1,6 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "../../db";
-import { NotFoundError } from "../../lib/errors";
+import { BadRequestError, NotFoundError } from "../../lib/errors";
 import { categories } from "../../../shared/schema";
 import type {
   CreateCategoryInput,
@@ -55,32 +55,60 @@ export class CategoriesService {
   }
 
   async createCategory(userId: string, input: CreateCategoryInput) {
-    const [category] = await this.db
-      .insert(categories)
-      .values({
-        userId,
-        ...input,
-      })
-      .returning();
+    let category;
+    try {
+      [category] = await this.db
+        .insert(categories)
+        .values({
+          userId,
+          ...input,
+        })
+        .returning();
+    } catch (error) {
+      const dbError = error as { code?: string; constraint?: string };
+      if (
+        dbError.code === "23505" &&
+        dbError.constraint === "categories_user_name_type_unique"
+      ) {
+        throw new BadRequestError(
+          "A category with this name and type already exists.",
+        );
+      }
+      throw error;
+    }
 
     return category;
   }
 
   async updateCategory(userId: string, categoryId: string, input: UpdateCategoryInput) {
-    const [category] = await this.db
-      .update(categories)
-      .set({
-        name: input.name,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(categories.id, categoryId),
-          eq(categories.userId, userId),
-          isNull(categories.archivedAt),
-        ),
-      )
-      .returning();
+    let category;
+    try {
+      [category] = await this.db
+        .update(categories)
+        .set({
+          name: input.name,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(categories.id, categoryId),
+            eq(categories.userId, userId),
+            isNull(categories.archivedAt),
+          ),
+        )
+        .returning();
+    } catch (error) {
+      const dbError = error as { code?: string; constraint?: string };
+      if (
+        dbError.code === "23505" &&
+        dbError.constraint === "categories_user_name_type_unique"
+      ) {
+        throw new BadRequestError(
+          "A category with this name and type already exists.",
+        );
+      }
+      throw error;
+    }
 
     if (!category) {
       throw new NotFoundError("Category");

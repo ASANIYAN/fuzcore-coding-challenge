@@ -207,6 +207,7 @@ export const openApiDocument = {
           country: { type: "string", nullable: true },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
+          archivedAt: { type: "string", format: "date-time", nullable: true },
         },
       },
       CreateCustomerRequest: {
@@ -847,7 +848,7 @@ export const openApiDocument = {
             description: "Categories fetched",
             content: {
               "application/json": {
-                schema: successEnvelope("#/components/schemas/Category"),
+                schema: successEnvelopeNoMeta("#/components/schemas/Category"),
               },
             },
           },
@@ -870,9 +871,13 @@ export const openApiDocument = {
             description: "Category created",
             content: {
               "application/json": {
-                schema: successEnvelope("#/components/schemas/Category"),
+                schema: successEnvelopeNoMeta("#/components/schemas/Category"),
               },
             },
+          },
+          "400": {
+            description: "Validation error or duplicate category",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } },
           },
         },
       },
@@ -888,7 +893,7 @@ export const openApiDocument = {
             description: "Category fetched",
             content: {
               "application/json": {
-                schema: successEnvelope("#/components/schemas/Category"),
+                schema: successEnvelopeNoMeta("#/components/schemas/Category"),
               },
             },
           },
@@ -912,9 +917,13 @@ export const openApiDocument = {
             description: "Category updated",
             content: {
               "application/json": {
-                schema: successEnvelope("#/components/schemas/Category"),
+                schema: successEnvelopeNoMeta("#/components/schemas/Category"),
               },
             },
+          },
+          "400": {
+            description: "Validation error or duplicate category",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } },
           },
         },
       },
@@ -928,7 +937,7 @@ export const openApiDocument = {
             description: "Category archived",
             content: {
               "application/json": {
-                schema: successEnvelope("#/components/schemas/GenericMessage"),
+                schema: successEnvelopeNoMeta("#/components/schemas/GenericMessage"),
               },
             },
           },
