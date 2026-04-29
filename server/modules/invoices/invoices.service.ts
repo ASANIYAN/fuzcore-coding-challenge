@@ -3,7 +3,7 @@ import PDFDocument from "pdfkit";
 import Stripe from "stripe";
 import { db } from "../../db";
 import { BadRequestError, NotFoundError } from "../../lib/errors";
-import { toMinorUnits } from "../../lib/currency";
+import { toDecimal, toMinorUnits } from "../../lib/currency";
 import { env } from "../../lib/env";
 import { enqueueEmailJob } from "../../lib/queue";
 import {
@@ -29,6 +29,11 @@ type InvoicesServiceDeps = {
     params: Stripe.Checkout.SessionCreateParams,
   ) => Promise<{ url: string | null }>;
 };
+
+function formatMoney(minorUnits: bigint, currency: string) {
+  const value = toDecimal(minorUnits, currency);
+  return `${currency} ${value.toFixed(2)}`;
+}
 
 function buildInvoiceTotals(
   items: Array<{ quantity: string; unitPrice: bigint }>,
@@ -390,14 +395,46 @@ export class InvoicesService {
       await this.enqueueEmail({
         to: recipient.email,
         subject: `Invoice #${updated.invoiceNumber} from your service provider`,
-        text: [
-          `Hello ${recipient.displayName},`,
-          "",
-          `Your invoice #${updated.invoiceNumber} is ready.`,
-          `Payment link: ${paymentLink}`,
-          "",
-          "Thank you.",
-        ].join("\n"),
+        text: (() => {
+          const issueDate = new Date(invoiceWithItems.issueDate)
+            .toISOString()
+            .slice(0, 10);
+          const dueDate = invoiceWithItems.dueDate
+            ? new Date(invoiceWithItems.dueDate).toISOString().slice(0, 10)
+            : "N/A";
+          const itemLines = invoiceWithItems.items.map((item, index) => {
+            const quantity = Number(item.quantity);
+            const unitPriceMinor = BigInt(item.unitPrice);
+            const lineTotalMinor = BigInt(
+              Math.round(quantity * Number(unitPriceMinor)),
+            );
+            return `${index + 1}. ${item.description} | Qty: ${
+              item.quantity
+            } | Unit: ${formatMoney(unitPriceMinor, invoiceWithItems.currency)} | Line Total: ${formatMoney(lineTotalMinor, invoiceWithItems.currency)}`;
+          });
+
+          return [
+            `Hello ${recipient.displayName},`,
+            "",
+            `Your invoice #${updated.invoiceNumber} is ready.`,
+            `Issue Date: ${issueDate}`,
+            `Due Date: ${dueDate}`,
+            ...(invoiceWithItems.notes
+              ? [`Notes: ${invoiceWithItems.notes}`]
+              : []),
+            "",
+            "Invoice Items:",
+            ...itemLines,
+            "",
+            `Subtotal: ${formatMoney(BigInt(invoiceWithItems.subtotal), invoiceWithItems.currency)}`,
+            `Tax${invoiceWithItems.taxRate ? ` (${invoiceWithItems.taxRate}%)` : ""}: ${formatMoney(BigInt(invoiceWithItems.taxAmount), invoiceWithItems.currency)}`,
+            `Total: ${formatMoney(BigInt(invoiceWithItems.total), invoiceWithItems.currency)}`,
+            "",
+            `Pay securely here: ${paymentLink}`,
+            "",
+            "Thank you.",
+          ].join("\n");
+        })(),
       });
 
       const [owner] = await this.db

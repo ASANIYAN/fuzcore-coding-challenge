@@ -13,11 +13,35 @@ export class WebhooksController {
       ? req.body
       : Buffer.from(JSON.stringify(req.body ?? {}));
 
-    const event = this.webhooksService.verifyStripeWebhook(payload, headerValue);
+    logger.info(
+      {
+        requestId: req.requestId,
+        hasSignature: Boolean(headerValue),
+        payloadBytes: payload.length,
+      },
+      "stripe webhook request received",
+    );
+
+    const event = this.webhooksService.verifyStripeWebhook(
+      payload,
+      headerValue,
+    );
+    logger.info(
+      { requestId: req.requestId, eventId: event.id, eventType: event.type },
+      "stripe webhook acknowledged",
+    );
 
     setImmediate(() => {
       void this.webhooksService.processStripeEvent(event).catch((err) => {
-        logger.error({ err }, "stripe webhook processing failed");
+        logger.error(
+          {
+            err,
+            requestId: req.requestId,
+            eventId: event.id,
+            eventType: event.type,
+          },
+          "stripe webhook processing failed",
+        );
       });
     });
 

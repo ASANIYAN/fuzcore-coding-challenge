@@ -13,7 +13,10 @@ export async function createApp() {
   const allowedOrigin = env.FRONTEND_ORIGIN ?? "http://localhost:5000";
 
   app.use("/api/webhooks/stripe", express.raw({ type: "application/json" }));
-  app.use("/api/transactions/import", express.raw({ type: "multipart/form-data", limit: "2mb" }));
+  app.use(
+    "/api/transactions/import",
+    express.raw({ type: "multipart/form-data", limit: "2mb" }),
+  );
   app.use(helmet());
   app.use(
     cors({
