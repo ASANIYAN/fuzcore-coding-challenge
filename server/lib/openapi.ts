@@ -44,7 +44,8 @@ export const openApiDocument = {
   info: {
     title: "Small Business Accounting API",
     version: "1.0.0",
-    description: "Backend API contract for accounting and invoicing flows.",
+    description:
+      "Backend API contract for accounting and invoicing flows. Authentication uses server-managed sessions via HTTP-only cookies (no JWT bearer tokens).",
   },
   servers: [{ url: "/" }],
   tags: [
@@ -62,6 +63,8 @@ export const openApiDocument = {
         type: "apiKey",
         in: "cookie",
         name: "sid",
+        description:
+          "Session cookie issued by the server via Set-Cookie after successful signup/login.",
       },
     },
     schemas: {
@@ -513,7 +516,7 @@ export const openApiDocument = {
     "/api/auth/signup": {
       post: {
         tags: ["Auth"],
-        summary: "Register user and dispatch verification code",
+        summary: "Register user, create server session, and dispatch verification code",
         requestBody: {
           required: true,
           content: {
@@ -525,6 +528,13 @@ export const openApiDocument = {
         responses: {
           "201": {
             description: "Signup accepted",
+            headers: {
+              "Set-Cookie": {
+                description:
+                  "HTTP-only session cookie (sid) set by the server. Frontend should include credentials in subsequent requests.",
+                schema: { type: "string" },
+              },
+            },
             content: {
               "application/json": {
                 schema: successEnvelopeNoMeta("#/components/schemas/AuthMessage"),
@@ -581,7 +591,7 @@ export const openApiDocument = {
     "/api/auth/login": {
       post: {
         tags: ["Auth"],
-        summary: "Login user and create session",
+        summary: "Login user and create server session",
         requestBody: {
           required: true,
           content: {
@@ -593,6 +603,13 @@ export const openApiDocument = {
         responses: {
           "200": {
             description: "Login successful",
+            headers: {
+              "Set-Cookie": {
+                description:
+                  "HTTP-only session cookie (sid) set by the server. Frontend should include credentials in subsequent requests.",
+                schema: { type: "string" },
+              },
+            },
             content: {
               "application/json": {
                 schema: successEnvelopeNoMeta("#/components/schemas/AuthMessage"),
@@ -617,11 +634,18 @@ export const openApiDocument = {
     "/api/auth/logout": {
       post: {
         tags: ["Auth"],
-        summary: "Logout user and revoke current session",
+        summary: "Logout user and revoke current server session",
         security: [{ cookieAuth: [] }],
         responses: {
           "200": {
             description: "Logout successful",
+            headers: {
+              "Set-Cookie": {
+                description:
+                  "Session cookie cleared/expired by the server.",
+                schema: { type: "string" },
+              },
+            },
             content: {
               "application/json": {
                 schema: successEnvelopeNoMeta("#/components/schemas/AuthMessage"),
