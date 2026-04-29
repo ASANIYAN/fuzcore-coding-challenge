@@ -233,7 +233,7 @@ export class TransactionsService {
       throw new NotFoundError("Transaction");
     }
 
-    return { message: "Transaction archived successfully." };
+    return { message: "Transaction deleted successfully." };
   }
 
   async importTransactions(userId: string, input: ImportTransactionsInput) {
