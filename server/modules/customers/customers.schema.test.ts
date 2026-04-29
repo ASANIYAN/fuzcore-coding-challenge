@@ -25,6 +25,15 @@ test("createCustomerSchema rejects invalid payload", () => {
   assert.equal(result.success, false);
 });
 
+test("createCustomerSchema requires email", () => {
+  const result = createCustomerSchema.safeParse({
+    displayName: "Acme Ltd",
+    type: "company",
+  });
+
+  assert.equal(result.success, false);
+});
+
 test("listCustomersQuerySchema parses pagination defaults", () => {
   const result = listCustomersQuerySchema.parse({});
 

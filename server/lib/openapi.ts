@@ -212,12 +212,12 @@ export const openApiDocument = {
       },
       CreateCustomerRequest: {
         type: "object",
-        required: ["displayName", "type"],
+        required: ["displayName", "type", "email"],
         example: {
           displayName: "Acme Ltd",
           type: "company",
           companyName: null,
-          email: null,
+          email: "billing@acme.test",
           phone: null,
           taxId: null,
           addressLine1: null,

@@ -31,7 +31,7 @@ export const createCustomerSchema = createInsertSchema(customers)
   .extend({
     displayName: z.string().trim().min(1),
     companyName: z.string().trim().optional().nullable(),
-    email: z.string().email().optional().nullable(),
+    email: z.string().trim().email(),
     phone: z.string().trim().optional().nullable(),
     taxId: z.string().trim().optional().nullable(),
     addressLine1: z.string().trim().optional().nullable(),
