@@ -22,7 +22,15 @@ interface CustomInputProps<T extends FieldValues> {
   inputClassName?: string;
   errorClassName?: string;
   description?: string;
-  type?: "text" | "password" | "email" | "number" | "tel" | "time";
+  type?:
+    | "text"
+    | "password"
+    | "email"
+    | "number"
+    | "tel"
+    | "date"
+    | "time"
+    | "datetime-local";
   error?: string;
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   maxLength?: number;
