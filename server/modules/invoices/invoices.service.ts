@@ -35,7 +35,9 @@ function buildInvoiceTotals(
   taxRateValue: string | null,
 ) {
   const subtotal = items.reduce((sum, item) => {
-    const lineTotal = BigInt(Math.round(Number(item.quantity) * Number(item.unitPrice)));
+    const lineTotal = BigInt(
+      Math.round(Number(item.quantity) * Number(item.unitPrice)),
+    );
     return sum + lineTotal;
   }, BigInt(0));
 
@@ -55,7 +57,8 @@ export class InvoicesService {
   private readonly enqueueEmail: typeof enqueueEmailJob;
   private readonly createStripeCheckoutSession: InvoicesServiceDeps["createStripeCheckoutSession"];
 
-  private readonly frontendOrigin = env.FRONTEND_ORIGIN ?? "http://localhost:5173";
+  private readonly frontendOrigin =
+    env.FRONTEND_ORIGIN ?? "http://localhost:5000";
 
   constructor(deps?: Partial<InvoicesServiceDeps>) {
     this.db = deps?.db ?? db;
@@ -80,6 +83,32 @@ export class InvoicesService {
     if (!customer) {
       throw new BadRequestError("Invalid customer for this user");
     }
+  }
+
+  private async getCustomerRecipientEmail(userId: string, customerId: string) {
+    const [customer] = await this.db
+      .select({
+        email: customers.email,
+        displayName: customers.displayName,
+      })
+      .from(customers)
+      .where(and(eq(customers.id, customerId), eq(customers.userId, userId)))
+      .limit(1);
+
+    if (!customer) {
+      throw new BadRequestError("Invalid customer for this user");
+    }
+
+    if (!customer.email) {
+      throw new BadRequestError(
+        "Customer email is required before sending this invoice",
+      );
+    }
+
+    return {
+      email: customer.email,
+      displayName: customer.displayName,
+    };
   }
 
   private async loadInvoiceWithItems(userId: string, invoiceId: string) {
@@ -120,7 +149,8 @@ export class InvoicesService {
   async listInvoices(userId: string, query: ListInvoicesQuery) {
     const conditions = [eq(invoices.userId, userId)];
     if (query.status) conditions.push(eq(invoices.status, query.status));
-    if (query.customerId) conditions.push(eq(invoices.customerId, query.customerId));
+    if (query.customerId)
+      conditions.push(eq(invoices.customerId, query.customerId));
     if (query.from) conditions.push(gte(invoices.issueDate, query.from));
     if (query.to) conditions.push(lte(invoices.issueDate, query.to));
 
@@ -152,7 +182,10 @@ export class InvoicesService {
             .where(inArray(invoiceItems.invoiceId, invoiceIds))
         : [];
 
-    const itemMap = new Map<string, Array<{ quantity: string; unitPrice: bigint }>>();
+    const itemMap = new Map<
+      string,
+      Array<{ quantity: string; unitPrice: bigint }>
+    >();
     for (const item of allItems) {
       const existing = itemMap.get(item.invoiceId) ?? [];
       existing.push({ quantity: item.quantity, unitPrice: item.unitPrice });
@@ -235,7 +268,11 @@ export class InvoicesService {
     return this.loadInvoiceWithItems(userId, result);
   }
 
-  async updateInvoice(userId: string, invoiceId: string, input: UpdateInvoiceInput) {
+  async updateInvoice(
+    userId: string,
+    invoiceId: string,
+    input: UpdateInvoiceInput,
+  ) {
     const [existing] = await this.db
       .select()
       .from(invoices)
@@ -262,14 +299,17 @@ export class InvoicesService {
           customerId: input.customerId ?? existing.customerId,
           taxRate: input.taxRate == null ? null : input.taxRate.toString(),
           issueDate: input.issueDate ?? existing.issueDate,
-          dueDate: input.dueDate === undefined ? existing.dueDate : input.dueDate,
+          dueDate:
+            input.dueDate === undefined ? existing.dueDate : input.dueDate,
           notes: input.notes === undefined ? existing.notes : input.notes,
           updatedAt: now,
         })
         .where(eq(invoices.id, invoiceId));
 
       if (input.items) {
-        await tx.delete(invoiceItems).where(eq(invoiceItems.invoiceId, invoiceId));
+        await tx
+          .delete(invoiceItems)
+          .where(eq(invoiceItems.invoiceId, invoiceId));
         await tx.insert(invoiceItems).values(
           input.items.map((item) => ({
             invoiceId,
@@ -305,7 +345,14 @@ export class InvoicesService {
     }
 
     if (input.status === "sent") {
-      const invoiceWithItems = await this.loadInvoiceWithItems(userId, invoiceId);
+      const invoiceWithItems = await this.loadInvoiceWithItems(
+        userId,
+        invoiceId,
+      );
+      const recipient = await this.getCustomerRecipientEmail(
+        userId,
+        invoiceWithItems.customerId,
+      );
       const paymentLink =
         invoiceWithItems.paymentLink ??
         (await this.createStripePaymentLinkForInvoice(invoiceWithItems));
@@ -323,7 +370,9 @@ export class InvoicesService {
           throw new NotFoundError("Invoice");
         }
         if (locked.status !== "draft") {
-          throw new BadRequestError("Only draft invoices can transition to sent");
+          throw new BadRequestError(
+            "Only draft invoices can transition to sent",
+          );
         }
 
         return tx
@@ -338,6 +387,19 @@ export class InvoicesService {
           .returning();
       });
 
+      await this.enqueueEmail({
+        to: recipient.email,
+        subject: `Invoice #${updated.invoiceNumber} from your service provider`,
+        text: [
+          `Hello ${recipient.displayName},`,
+          "",
+          `Your invoice #${updated.invoiceNumber} is ready.`,
+          `Payment link: ${paymentLink}`,
+          "",
+          "Thank you.",
+        ].join("\n"),
+      });
+
       const [owner] = await this.db
         .select({
           email: users.email,
@@ -345,11 +407,16 @@ export class InvoicesService {
         .from(users)
         .where(eq(users.id, updated.userId))
         .limit(1);
+
       if (owner?.email) {
         await this.enqueueEmail({
           to: owner.email,
           subject: `Invoice #${updated.invoiceNumber} sent`,
-          text: `Invoice #${updated.invoiceNumber} was sent successfully.`,
+          text: [
+            `Invoice #${updated.invoiceNumber} was sent to customer successfully.`,
+            `Customer: ${recipient.displayName}`,
+            `Customer email: ${recipient.email}`,
+          ].join("\n"),
         });
       }
 
@@ -383,7 +450,9 @@ export class InvoicesService {
   async createInvoicePaymentLink(userId: string, invoiceId: string) {
     const invoice = await this.loadInvoiceWithItems(userId, invoiceId);
     if (invoice.status !== "sent") {
-      throw new BadRequestError("Payment link can only be created for sent invoices");
+      throw new BadRequestError(
+        "Payment link can only be created for sent invoices",
+      );
     }
 
     if (invoice.paymentLink) {
@@ -412,7 +481,9 @@ export class InvoicesService {
   ) {
     const totalMinorUnits = Number(invoice.total);
     if (!Number.isSafeInteger(totalMinorUnits) || totalMinorUnits <= 0) {
-      throw new BadRequestError("Invoice total is invalid for payment link creation");
+      throw new BadRequestError(
+        "Invoice total is invalid for payment link creation",
+      );
     }
 
     const session = await this.createStripeCheckoutSession({
@@ -447,7 +518,9 @@ export class InvoicesService {
   async getInvoicePdf(userId: string, invoiceId: string) {
     const invoice = await this.loadInvoiceWithItems(userId, invoiceId);
     const issueDate = new Date(invoice.issueDate).toISOString().slice(0, 10);
-    const dueDate = invoice.dueDate ? new Date(invoice.dueDate).toISOString().slice(0, 10) : "-";
+    const dueDate = invoice.dueDate
+      ? new Date(invoice.dueDate).toISOString().slice(0, 10)
+      : "-";
 
     const doc = new PDFDocument({ margin: 48 });
     const chunks: Buffer[] = [];
