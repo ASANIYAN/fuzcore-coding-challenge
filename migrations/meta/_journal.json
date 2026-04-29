@@ -71,6 +71,13 @@
       "when": 1777462200000,
       "tag": "0009_import_jobs_and_status_enum",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1777458185494,
+      "tag": "0010_shiny_vermin",
+      "breakpoints": true
     }
   ]
 }
