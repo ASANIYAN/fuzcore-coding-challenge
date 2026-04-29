@@ -491,6 +491,11 @@ export class InvoicesService {
       metadata: {
         invoiceId: invoice.id,
       },
+      payment_intent_data: {
+        metadata: {
+          invoiceId: invoice.id,
+        },
+      },
       client_reference_id: invoice.id,
       success_url: `${this.frontendOrigin}/invoices/${invoice.id}?payment=success`,
       cancel_url: `${this.frontendOrigin}/invoices/${invoice.id}?payment=cancelled`,

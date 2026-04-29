@@ -13,35 +13,56 @@ type ConstructEvent = (
   signature: string,
   secret: string,
 ) => Stripe.Event;
+type RetrievePaymentIntent = (
+  paymentIntentId: string,
+) => Promise<{ metadata?: Record<string, string> | null }>;
 
 type WebhooksServiceDeps = {
   db: Db;
   enqueueEmailJob: EnqueueEmailJob;
   constructEvent: ConstructEvent;
+  retrievePaymentIntent: RetrievePaymentIntent;
 };
 
 const stripeClient = new Stripe(env.STRIPE_SECRET_KEY, {
   apiVersion: "2025-08-27.basil",
 });
 
-function getInvoiceIdFromEvent(event: Stripe.Event) {
-  if (event.type !== "checkout.session.completed") {
-    return null;
+function getInvoiceIdFromMetadata(metadata: Record<string, string> | null | undefined) {
+  return metadata?.invoiceId ?? metadata?.invoice_id ?? null;
+}
+
+function getInvoiceIdFromEventObject(event: Stripe.Event) {
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object as Stripe.Checkout.Session;
+    return (
+      getInvoiceIdFromMetadata(session.metadata) ??
+      session.client_reference_id ??
+      null
+    );
   }
 
-  const session = event.data.object as Stripe.Checkout.Session;
-  return (
-    session.metadata?.invoiceId ??
-    session.metadata?.invoice_id ??
-    session.client_reference_id ??
-    null
-  );
+  if (event.type === "payment_intent.succeeded") {
+    const paymentIntent = event.data.object as Stripe.PaymentIntent;
+    return getInvoiceIdFromMetadata(paymentIntent.metadata);
+  }
+
+  if (event.type === "charge.updated") {
+    const charge = event.data.object as Stripe.Charge;
+    if (!charge.paid || charge.status !== "succeeded") {
+      return null;
+    }
+    return getInvoiceIdFromMetadata(charge.metadata);
+  }
+
+  return null;
 }
 
 export class WebhooksService {
   private readonly db: Db;
   private readonly enqueueEmailJob: EnqueueEmailJob;
   private readonly constructEvent: ConstructEvent;
+  private readonly retrievePaymentIntent: RetrievePaymentIntent;
 
   constructor(deps?: Partial<WebhooksServiceDeps>) {
     this.db = deps?.db ?? db;
@@ -50,6 +71,10 @@ export class WebhooksService {
       deps?.constructEvent ??
       ((payload, signature, secret) =>
         stripeClient.webhooks.constructEvent(payload, signature, secret));
+    this.retrievePaymentIntent =
+      deps?.retrievePaymentIntent ??
+      (async (paymentIntentId: string) =>
+        stripeClient.paymentIntents.retrieve(paymentIntentId));
   }
 
   verifyStripeWebhook(payload: Buffer, signature: string | undefined) {
@@ -76,7 +101,16 @@ export class WebhooksService {
       return { received: true };
     }
 
-    const invoiceId = getInvoiceIdFromEvent(event);
+    let invoiceId = getInvoiceIdFromEventObject(event);
+    if (!invoiceId && event.type === "charge.updated") {
+      const charge = event.data.object as Stripe.Charge;
+      const paymentIntentId =
+        typeof charge.payment_intent === "string" ? charge.payment_intent : null;
+      if (paymentIntentId) {
+        const paymentIntent = await this.retrievePaymentIntent(paymentIntentId);
+        invoiceId = getInvoiceIdFromMetadata(paymentIntent.metadata ?? null);
+      }
+    }
     if (!invoiceId) {
       return { received: true };
     }

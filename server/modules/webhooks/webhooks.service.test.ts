@@ -153,3 +153,89 @@ test("handleStripeWebhook ignores duplicate event ids", async () => {
   assert.equal(inserts.length, 0);
   assert.equal(jobs.length, 0);
 });
+
+test("handleStripeWebhook marks invoice paid on payment_intent.succeeded via metadata", async () => {
+  const { db, updates, inserts } = createMockDb([
+    [],
+    [
+      {
+        id: "invoice-id",
+        userId: "user-id",
+        invoiceNumber: 51,
+        status: "sent",
+      },
+    ],
+    [{ email: "owner@example.com" }],
+  ]);
+
+  const service = new WebhooksService({
+    db: db as never,
+    enqueueEmailJob: (async () => ({})) as never,
+    constructEvent: (() =>
+      ({
+        id: "evt_pi_123",
+        type: "payment_intent.succeeded",
+        data: {
+          object: {
+            metadata: {
+              invoiceId: "invoice-id",
+            },
+          },
+        },
+      }) as never) as never,
+  });
+
+  const result = await service.handleStripeWebhook(Buffer.from("{}"), "valid");
+  assert.deepEqual(result, { received: true });
+  assert.equal(updates.length, 1);
+  assert.equal(updates[0].status, "paid");
+  assert.equal(inserts.length, 1);
+  assert.equal(inserts[0].eventId, "evt_pi_123");
+});
+
+test("handleStripeWebhook marks invoice paid on charge.updated via payment_intent metadata lookup", async () => {
+  const { db, updates, inserts } = createMockDb([
+    [],
+    [
+      {
+        id: "invoice-id",
+        userId: "user-id",
+        invoiceNumber: 52,
+        status: "sent",
+      },
+    ],
+    [{ email: "owner@example.com" }],
+  ]);
+
+  let retrievedPaymentIntentId: string | null = null;
+
+  const service = new WebhooksService({
+    db: db as never,
+    enqueueEmailJob: (async () => ({})) as never,
+    constructEvent: (() =>
+      ({
+        id: "evt_charge_123",
+        type: "charge.updated",
+        data: {
+          object: {
+            paid: true,
+            status: "succeeded",
+            metadata: {},
+            payment_intent: "pi_123",
+          },
+        },
+      }) as never) as never,
+    retrievePaymentIntent: (async (paymentIntentId: string) => {
+      retrievedPaymentIntentId = paymentIntentId;
+      return { metadata: { invoiceId: "invoice-id" } };
+    }) as never,
+  });
+
+  const result = await service.handleStripeWebhook(Buffer.from("{}"), "valid");
+  assert.deepEqual(result, { received: true });
+  assert.equal(retrievedPaymentIntentId, "pi_123");
+  assert.equal(updates.length, 1);
+  assert.equal(updates[0].status, "paid");
+  assert.equal(inserts.length, 1);
+  assert.equal(inserts[0].eventId, "evt_charge_123");
+});
