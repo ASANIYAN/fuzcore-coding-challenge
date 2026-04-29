@@ -577,17 +577,20 @@ export class InvoicesService {
       doc.text(`Issue Date: ${issueDate}`);
       doc.text(`Due Date: ${dueDate}`);
       doc.text(`Currency: ${invoice.currency}`);
-      doc.text(`Subtotal (minor units): ${invoice.subtotal}`);
-      doc.text(`Tax (minor units): ${invoice.taxAmount}`);
-      doc.text(`Total (minor units): ${invoice.total}`);
+      doc.text(`Subtotal: ${formatMoney(BigInt(invoice.subtotal), invoice.currency)}`);
+      doc.text(`Tax: ${formatMoney(BigInt(invoice.taxAmount), invoice.currency)}`);
+      doc.text(`Total: ${formatMoney(BigInt(invoice.total), invoice.currency)}`);
       doc.moveDown();
       doc.fontSize(13).text("Line Items");
       doc.moveDown(0.4);
       for (const item of invoice.items) {
+        const quantity = Number(item.quantity);
+        const unitPriceMinor = BigInt(item.unitPrice);
+        const lineTotalMinor = BigInt(Math.round(quantity * Number(unitPriceMinor)));
         doc
           .fontSize(10)
           .text(
-            `${item.sortOrder + 1}. ${item.description} | Qty: ${item.quantity} | Unit: ${item.unitPrice}`,
+            `${item.sortOrder + 1}. ${item.description} | Qty: ${item.quantity} | Unit: ${formatMoney(unitPriceMinor, invoice.currency)} | Line Total: ${formatMoney(lineTotalMinor, invoice.currency)}`,
           );
       }
 
