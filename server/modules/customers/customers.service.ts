@@ -90,11 +90,19 @@ export class CustomersService {
         })
         .returning();
     } catch (error) {
-      const dbError = error as { code?: string; constraint?: string };
-      if (
+      const dbError = error as {
+        code?: string;
+        constraint?: string;
+        detail?: string;
+        table?: string;
+      };
+      const isCustomerEmailUniqueViolation =
         dbError.code === "23505" &&
-        dbError.constraint === "customers_user_email_unique"
-      ) {
+        (dbError.constraint === "customers_user_email_unique" ||
+          dbError.table === "customers" ||
+          dbError.detail?.includes("(user_id, email)") === true);
+
+      if (isCustomerEmailUniqueViolation) {
         throw new BadRequestError("A customer with this email already exists.");
       }
       throw error;
