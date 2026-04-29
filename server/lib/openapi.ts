@@ -1303,12 +1303,12 @@ export const openApiDocument = {
     "/api/invoices/{id}/pdf": {
       get: {
         tags: ["Invoices"],
-        summary: "Generate invoice PDF",
+        summary: "Download invoice PDF",
         security: [{ cookieAuth: [] }],
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
         responses: {
           "200": {
-            description: "PDF stream",
+            description: "Downloadable PDF file",
             content: {
               "application/pdf": {
                 schema: {

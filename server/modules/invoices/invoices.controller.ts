@@ -155,7 +155,7 @@ export class InvoicesController {
 
     const pdf = await this.invoicesService.getInvoicePdf(req.user!.id, paramsResult.data.id);
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename=\"${pdf.fileName}\"`);
+    res.setHeader("Content-Disposition", `attachment; filename=\"${pdf.fileName}\"`);
     return res.status(200).send(pdf.buffer);
   };
 }
