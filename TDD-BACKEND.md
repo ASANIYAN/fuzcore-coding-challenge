@@ -71,7 +71,7 @@ A full-stack accounting app for small business owners to manage customers, recor
 
 - **Pessimistic locking** (`SELECT FOR UPDATE`) is used for any operation that involves a read-modify-write sequence on a shared row. Locks are acquired inside a transaction and released on commit.
 - **Status re-check inside the lock** is mandatory — application-level pre-checks are fast-path optimisations only. The authoritative check always happens after the lock is acquired to guard against stale reads from concurrent requests.
-- **CSV imports** are serialised per user via BullMQ job queue (concurrency 1 per user) rather than DB locks — bulk inserts are better handled asynchronously.
+- **CSV imports** are serialised per user via the `import_jobs` table — a new job is rejected with `409 Conflict` if the user already has a `pending` or `processing` job. This replaces Redis-based locking and makes job state queryable, auditable, and durable.
 
 ### Webhook Idempotency
 
@@ -79,8 +79,17 @@ A full-stack accounting app for small business owners to manage customers, recor
 - Stripe `event.id` is stored in `processed_webhook_events` after successful processing. Any duplicate delivery is rejected at the first layer before any invoice logic runs.
 - A transaction typed `income` must not link to a category typed `expense` and vice versa. Enforced via a `BEFORE INSERT OR UPDATE` trigger on `transactions` that cross-queries the `categories` table. A CHECK constraint cannot enforce this as it is row-scoped and cannot perform cross-table lookups.
 
-### ORM and Migrations
+### Transaction Type Inference
 
+- `transactions.type` is **never accepted from any client payload** — not the create endpoint, not the update endpoint, not the CSV import. It is always inferred from `categories.type` by the service layer after resolving `category_id`.
+- This makes the category the single source of truth for transaction type. The `type` column is retained on `transactions` as a deliberate denormalisation for query performance — filtering and aggregating by type without a join to `categories` is significantly faster at scale.
+- The DB trigger enforces consistency as the last line of defence. Zod schemas explicitly omit `type` from all transaction request shapes so it cannot be passed in accidentally.
+
+### Category Reference Format
+
+- In the CSV import flow, categories are identified by a human-readable reference string in the format `type:name` — e.g. `income:Consulting`, `expense:Office Supplies`. This is unambiguous because the `UNIQUE (user_id, name, type)` constraint guarantees no two active categories share the same name and type combination per user.
+- Customers are identified in CSV by `customerEmail` — unambiguous due to the `UNIQUE (user_id, email)` constraint. Nullable since expense transactions do not require a customer.
+- The worker resolves both references to their respective UUIDs before writing. Unresolvable references are reported as row-level errors with a clear human-readable message.
 - **Drizzle ORM** with **drizzle-zod** for type-safe database access. Drizzle-zod automatically generates Zod validation schemas from Drizzle table definitions, keeping DB schema and validation schema in sync and eliminating duplication.
 - **drizzle-kit** for migration management. Schema changes generate versioned SQL migration files. Migrations run on container startup before the server begins listening.
 
@@ -249,6 +258,7 @@ A full-stack accounting app for small business owners to manage customers, recor
 
 - `transaction_date` is manually entered by the user to support backdating. `created_at` is the DB record creation timestamp — these two will frequently differ.
 - `customer_id` is nullable — expense transactions do not require a customer.
+- `type` is never accepted from client payloads. The service layer reads `categories.type` for the given `category_id` and writes it to `transactions.type`. The DB trigger enforces consistency as the last line of defence.
 - Amount is accepted as a decimal at the API boundary, multiplied by currency scale, stored as BIGINT. Reversed on the way out.
 
 ---
@@ -343,6 +353,35 @@ A full-stack accounting app for small business owners to manage customers, recor
 
 ---
 
+### `import_jobs`
+
+| Column         | Type        | Constraints                                                                            |
+| -------------- | ----------- | -------------------------------------------------------------------------------------- |
+| id             | UUID        | PK, default gen_random_uuid()                                                          |
+| user_id        | UUID        | NOT NULL, FK → users(id)                                                               |
+| status         | TEXT        | NOT NULL, CHECK IN ('pending', 'processing', 'completed', 'failed'), default 'pending' |
+| total_rows     | INTEGER     | nullable — populated when worker begins processing                                     |
+| imported_rows  | INTEGER     | nullable — populated on completion                                                     |
+| duplicate_rows | INTEGER     | nullable — rows skipped due to import_hash match                                       |
+| failed_rows    | INTEGER     | nullable — rows that failed validation                                                 |
+| errors         | JSONB       | nullable — array of { row, reason }                                                    |
+| started_at     | TIMESTAMPTZ | nullable — stamped when worker picks up the job                                        |
+| completed_at   | TIMESTAMPTZ | nullable — stamped on success or failure                                               |
+| created_at     | TIMESTAMPTZ | NOT NULL, default now()                                                                |
+
+**Indexes & Constraints**
+
+- `INDEX (user_id)`
+- `INDEX (user_id, status)` — used for active job check on new upload requests
+
+**Notes**
+
+- Before enqueuing a new import, check for any existing job with `status IN ('pending', 'processing')` for the user. If found, return `409 Conflict` — this serialises imports per user without Redis locks.
+- `completed_at` being non-null signals the user is free to upload again. The polling endpoint reads directly from this table — not from BullMQ — making results durable regardless of BullMQ job retention settings.
+- Results persist in this table permanently for audit and user reference.
+
+---
+
 ## Triggers
 
 ### 1. Invoice State Machine — `invoices`
@@ -375,13 +414,12 @@ Fetches `type` from `categories` for the given `category_id`. Raises an exceptio
 
 ### Locking Strategy by Scenario
 
-| Scenario                         | Strategy                                                            | Reason                                                                   |
-| -------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Invoice status transition        | `SELECT FOR UPDATE` on invoice row                                  | Single row, must be synchronous, prevents concurrent transitions         |
-| Invoice number increment         | `SELECT FOR UPDATE` on counter row                                  | Atomic read-modify-write, scoped per user                                |
-| Webhook payment confirmation     | `processed_webhook_events` check + `SELECT FOR UPDATE` + DB trigger | Three layers — Stripe can retry concurrently                             |
-| CSV import                       | BullMQ serial queue per user (concurrency: 1)                       | Bulk operation, better handled async, makes duplicate detection reliable |
-| Customer / Transaction mutations | No explicit lock                                                    | Scoped to `user_id`, no shared resource contention                       |
+| Scenario                     | Strategy                                                            | Reason                                                           |
+| ---------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Invoice status transition    | `SELECT FOR UPDATE` on invoice row                                  | Single row, must be synchronous, prevents concurrent transitions |
+| Invoice number increment     | `SELECT FOR UPDATE` on counter row                                  | Atomic read-modify-write, scoped per user                        |
+| Webhook payment confirmation | `processed_webhook_events` check + `SELECT FOR UPDATE` + DB trigger | Three layers — Stripe can retry concurrently                     |
+| CSV import serialisation     | `import_jobs` status check — reject with 409 if active job exists   | DB-native, auditable, replaces Redis lock entirely               |
 
 ---
 
@@ -642,12 +680,12 @@ All monetary values are returned as BIGINT with their currency code. Conversion 
 
 ### Transactions — `/transactions`
 
-| Method | Endpoint            | Action                                                                                                                                                      |
-| ------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/transactions`     | Returns paginated list of active transactions scoped to authenticated user, ordered by `transaction_date` descending.                                       |
-| POST   | `/transactions`     | Creates a new transaction. Amount accepted as decimal, converted to BIGINT at boundary. Category type must match transaction type — enforced by DB trigger. |
-| PATCH  | `/transactions/:id` | Partial update. Amount conversion applies on update. Category type consistency re-validated by trigger.                                                     |
-| DELETE | `/transactions/:id` | Soft delete — stamps `archived_at`.                                                                                                                         |
+| Method | Endpoint            | Action                                                                                                                                                                          |
+| ------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/transactions`     | Returns paginated list of active transactions scoped to authenticated user, ordered by `transaction_date` descending.                                                           |
+| POST   | `/transactions`     | Creates a new transaction. `type` is never accepted — inferred from `categories.type` for the given `category_id`. Amount accepted as decimal, converted to BIGINT at boundary. |
+| PATCH  | `/transactions/:id` | Partial update. `type` cannot be updated directly — change `category_id` to a different category type to change the transaction type. Amount conversion applies on update.      |
+| DELETE | `/transactions/:id` | Soft delete — stamps `archived_at`.                                                                                                                                             |
 
 **Query Parameters**
 
@@ -763,25 +801,81 @@ All monetary values are returned as BIGINT with their currency code. Conversion 
 
 ### Stretch Goal Endpoints
 
-| Method | Endpoint                      | Action                                                                                                                                                                                                                                                                            |
-| ------ | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/invoices/:id/pdf`           | Generates and returns a downloadable PDF containing: business owner details, customer details, invoice number, issue and due dates, line items table, subtotal, tax rate, tax amount, total, notes, payment link if present, PAID/VOID status watermark if applicable.            |
-| POST   | `/transactions/import`        | Accepts CSV file upload. Validates file format and enqueues an import job via BullMQ. Returns `202 Accepted` with a `jobId` immediately — does not process inline. Worker processes imports serially per user (concurrency: 1) making `import_hash` duplicate detection reliable. |
-| GET    | `/transactions/import/:jobId` | Poll for import job status and results. Returns `pending`, `processing`, `completed`, or `failed` with row-level error details on completion.                                                                                                                                     |
-| POST   | `/invoices/:id/payment-link`  | Generates a Stripe payment link for the invoice total. Only permitted for `sent` invoices. Stores link on invoice record and returns it.                                                                                                                                          |
+| Method | Endpoint                      | Action                                                                                                                                                                                                                                                                                        |
+| ------ | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/invoices/:id/pdf`           | Generates and returns a downloadable PDF containing: business owner details, customer details, invoice number, issue and due dates, line items table, subtotal, tax rate, tax amount, total, notes, payment link if present, PAID/VOID status watermark if applicable.                        |
+| GET    | `/transactions/import/sample` | No auth required. Returns a downloadable sample `.csv` file with correct headers and two example rows — one income, one expense. Response headers: `Content-Type: text/csv`, `Content-Disposition: attachment; filename="transactions-sample.csv"`.                                           |
+| POST   | `/transactions/import`        | Accepts `multipart/form-data` CSV file upload. Validates file is `.csv` and within size limit. Checks for active import job for user — returns `409 Conflict` if one exists. Creates `import_jobs` record, enqueues BullMQ job, returns `202 Accepted` with `jobId`. Does not process inline. |
+| GET    | `/transactions/import/:jobId` | Polls import job status from `import_jobs` table. Returns current status and full results summary on completion.                                                                                                                                                                              |
+| POST   | `/invoices/:id/payment-link`  | Generates a Stripe payment link for the invoice total. Only permitted for `sent` invoices. Stores link on invoice record and returns it.                                                                                                                                                      |
 
-**CSV Import Response:**
+**CSV Format**
+
+`type` is not a column — it is inferred from the `category` reference. `category` uses the format `type:name` (e.g. `income:Consulting`, `expense:Office Supplies`). Customer is identified by email, not UUID.
+
+```csv
+category,amount,currency,customerEmail,description,reference,transactionDate
+income:Consulting,1500.00,NGN,,Consulting fee for March,INV-0001,2024-01-15
+expense:Office Supplies,250.00,USD,,Office supplies purchase,REC-0042,2024-01-16
+income:Retainer,800.00,GBP,client@acme.com,Monthly retainer fee,INV-0002,2024-01-17
+```
+
+**CSV Column Rules**
+
+| Column            | Required | Format       | Notes                                                                                        |
+| ----------------- | -------- | ------------ | -------------------------------------------------------------------------------------------- |
+| `category`        | Yes      | `type:name`  | Must match an active category for the user. Type extracted from prefix.                      |
+| `amount`          | Yes      | Decimal      | e.g. `1500.00`. Converted to BIGINT in worker.                                               |
+| `currency`        | Yes      | ISO 4217     | Must be in supported currencies list.                                                        |
+| `customerEmail`   | No       | Email        | Must match an active customer for the user. Nullable — leave empty for expense transactions. |
+| `description`     | No       | Text         | Free text context for the transaction.                                                       |
+| `reference`       | No       | Alphanumeric | Document reference e.g. receipt or invoice number.                                           |
+| `transactionDate` | Yes      | ISO 8601     | `YYYY-MM-DD` or full datetime.                                                               |
+
+**CSV Import — 202 Response:**
 
 ```json
 {
   "success": true,
   "data": {
-    "imported": 90,
-    "failed": 10,
+    "jobId": "uuid",
+    "message": "Transaction import queued."
+  }
+}
+```
+
+**CSV Import — Poll Response (completed):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "jobId": "uuid",
+    "status": "completed",
+    "totalRows": 100,
+    "importedRows": 85,
+    "duplicateRows": 5,
+    "failedRows": 10,
     "errors": [
-      { "row": 4, "reason": "Invalid currency code" },
-      { "row": 17, "reason": "Missing transaction_date" }
-    ]
+      { "row": 4, "reason": "Category 'expense:Travel' not found" },
+      { "row": 17, "reason": "Missing transactionDate" },
+      { "row": 23, "reason": "Customer email 'unknown@test.com' not found" }
+    ],
+    "startedAt": "2024-01-15T10:30:00.000Z",
+    "completedAt": "2024-01-15T10:30:04.000Z"
+  }
+}
+```
+
+**409 Conflict — active import in progress:**
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "CONFLICT",
+    "message": "An import is already in progress. Please wait for it to complete before uploading another file.",
+    "details": []
   }
 }
 ```
@@ -820,31 +914,44 @@ On max retries → log + alert
 
 ### CSV Import Queue — BullMQ + Redis
 
-CSV imports are processed asynchronously to avoid HTTP timeout on large files and to serialise processing per user.
+CSV imports are processed asynchronously via BullMQ to avoid HTTP timeout on large files. Per-user serialisation is enforced via the `import_jobs` table rather than Redis locks.
 
-**Concurrency:** 1 job per user at a time — prevents concurrent imports for the same user from racing on `import_hash` duplicate detection.
+**Retry strategy:** 5 attempts with exponential backoff and jitter. On max retries exceeded, `import_jobs` status is set to `failed` with error context.
 
 **Flow:**
 
 ```
-POST /transactions/import → validate file format
-        ↓
-Enqueue import job with file contents and user_id
-        ↓
-Return 202 Accepted with jobId
-        ↓
+POST /transactions/import
+  → Validate file is .csv and within size limit
+  → Check import_jobs for active job (status pending/processing)
+     → 409 Conflict if found
+  → Create import_jobs record (status: pending)
+  → Enqueue BullMQ job with jobId and raw file buffer
+  → Return 202 Accepted with jobId
+
 Worker picks up job
-        ↓
-Parse and validate each row
-        ↓
-Bulk insert valid rows, collect row-level errors
-        ↓
-Mark job complete with results summary
-        ↓
-Client polls GET /transactions/import/:jobId for status
+  → Stamp import_jobs started_at, set status to processing
+  → Parse CSV into row objects
+  → Validate all rows upfront — collect per-row errors
+  → Bulk resolve category references (type:name → category_id + type)
+     → Error if category not found or archived
+  → Bulk resolve customerEmail references (email → customer_id)
+     → Error if customer not found or archived
+  → Set transactions.type from resolved category.type (never from payload)
+  → Generate import_hash per valid row, filter out duplicates
+  → Batch insert all valid rows in a single statement
+  → Update import_jobs: status completed, stamp completed_at,
+     total_rows, imported_rows, duplicate_rows, failed_rows, errors
+
+GET /transactions/import/:jobId
+  → Read from import_jobs table (not BullMQ)
+  → Returns status and full results summary
+  → completed_at being non-null signals user is free to upload again
 ```
 
-**Import hash** — each row is hashed from `amount + currency + transaction_date + description + reference`. Stored on the transaction record. Duplicate rows (same hash, same user) are skipped and reported in errors.
+**Import hash** — each valid row is hashed from `amount + currency + transactionDate + description + reference` before insert. Existing transactions are checked for matching hashes. Duplicates are skipped and counted separately in the results — not treated as failures.
+
+**Batch validation approach** — all rows are validated upfront before any writes begin. Category and customer ownership is verified in two bulk queries (one per reference type) rather than per-row queries. This reduces DB round trips from N to ~4 regardless of file size.
 
 ---
 
