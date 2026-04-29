@@ -8,6 +8,31 @@ export const globalErrorMiddleware: ErrorRequestHandler = (
   res,
   _next,
 ) => {
+  const parseError = err as {
+    type?: string;
+    status?: number;
+    expose?: boolean;
+  };
+
+  if (
+    parseError?.type === "entity.parse.failed" ||
+    (parseError?.status === 400 && parseError?.expose === true)
+  ) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: "BAD_REQUEST",
+        message: "Invalid JSON payload.",
+        details: [
+          {
+            path: [],
+            message: "Request body must be valid JSON.",
+          },
+        ],
+      },
+    });
+  }
+
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
       success: false,

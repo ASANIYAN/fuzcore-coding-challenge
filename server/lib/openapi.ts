@@ -302,7 +302,6 @@ export const openApiDocument = {
           currency: { type: "string", pattern: "^[A-Z]{3}$" },
           description: { type: "string", nullable: true },
           reference: { type: "string", nullable: true },
-          importHash: { type: "string", nullable: true },
           transactionDate: { type: "string", format: "date-time" },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },

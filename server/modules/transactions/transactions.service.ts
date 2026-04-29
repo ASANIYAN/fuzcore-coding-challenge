@@ -22,6 +22,7 @@ type TransactionsServiceDeps = {
 function serializeTransaction(row: TransactionRow) {
   return {
     ...row,
+    importHash: undefined,
     amount: toDecimal(row.amount, row.currency),
   };
 }
