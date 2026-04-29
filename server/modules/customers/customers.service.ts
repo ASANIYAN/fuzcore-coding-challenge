@@ -1,6 +1,6 @@
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "../../db";
-import { NotFoundError } from "../../lib/errors";
+import { BadRequestError, NotFoundError } from "../../lib/errors";
 import { customers } from "../../../shared/schema";
 import type {
   CreateCustomerInput,
@@ -79,13 +79,25 @@ export class CustomersService {
   }
 
   async createCustomer(userId: string, input: CreateCustomerInput) {
-    const [customer] = await this.db
-      .insert(customers)
-      .values({
-        userId,
-        ...input,
-      })
-      .returning();
+    let customer;
+    try {
+      [customer] = await this.db
+        .insert(customers)
+        .values({
+          userId,
+          ...input,
+        })
+        .returning();
+    } catch (error) {
+      const dbError = error as { code?: string; constraint?: string };
+      if (
+        dbError.code === "23505" &&
+        dbError.constraint === "customers_user_email_unique"
+      ) {
+        throw new BadRequestError("A customer with this email already exists.");
+      }
+      throw error;
+    }
 
     return customer;
   }
