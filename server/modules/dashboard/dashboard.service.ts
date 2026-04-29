@@ -1,5 +1,6 @@
 import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { db } from "../../db";
+import { toDecimal } from "../../lib/currency";
 import { invoices, transactions } from "../../../shared/schema";
 import type { DashboardQuery } from "./dashboard.schema";
 
@@ -19,27 +20,27 @@ function endOfMonth(date: Date) {
   );
 }
 
-type MonetaryGroup = { currency: string; amount: string };
+type MonetaryGroup = { currency: string; amount: bigint };
 
 function groupToMonetaryMap(rows: Array<{ currency: string; amount: string | number | bigint }>) {
   return rows.map((row) => ({
     currency: row.currency,
-    amount: String(row.amount),
+    amount: BigInt(row.amount),
   }));
 }
 
 function subtractGroupedAmounts(revenue: MonetaryGroup[], expenses: MonetaryGroup[]) {
   const map = new Map<string, bigint>();
   for (const row of revenue) {
-    map.set(row.currency, (map.get(row.currency) ?? BigInt(0)) + BigInt(row.amount));
+    map.set(row.currency, (map.get(row.currency) ?? BigInt(0)) + row.amount);
   }
   for (const row of expenses) {
-    map.set(row.currency, (map.get(row.currency) ?? BigInt(0)) - BigInt(row.amount));
+    map.set(row.currency, (map.get(row.currency) ?? BigInt(0)) - row.amount);
   }
 
   return Array.from(map.entries()).map(([currency, amount]) => ({
     currency,
-    amount: amount.toString(),
+    amount,
   }));
 }
 
@@ -136,22 +137,31 @@ export class DashboardService {
         from: from.toISOString(),
         to: to.toISOString(),
       },
-      revenue,
-      expenses,
-      net,
+      revenue: revenue.map((item) => ({
+        currency: item.currency,
+        amount: toDecimal(item.amount, item.currency),
+      })),
+      expenses: expenses.map((item) => ({
+        currency: item.currency,
+        amount: toDecimal(item.amount, item.currency),
+      })),
+      net: net.map((item) => ({
+        currency: item.currency,
+        amount: toDecimal(item.amount, item.currency),
+      })),
       outstanding: outstandingRows.map((row) => ({
         currency: row.currency,
-        amount: String(row.amount),
+        amount: toDecimal(BigInt(row.amount), row.currency),
         invoiceCount: Number(row.invoiceCount),
       })),
       overdue: overdueRows.map((row) => ({
         currency: row.currency,
-        amount: String(row.amount),
+        amount: toDecimal(BigInt(row.amount), row.currency),
         invoiceCount: Number(row.invoiceCount),
       })),
       recentTransactions: recentTransactions.map((item) => ({
         ...item,
-        amount: item.amount.toString(),
+        amount: toDecimal(item.amount, item.currency),
       })),
       recentInvoices,
     };

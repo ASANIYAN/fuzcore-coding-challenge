@@ -298,7 +298,7 @@ export const openApiDocument = {
           customerId: { type: "string", format: "uuid", nullable: true },
           categoryId: { type: "string", format: "uuid" },
           type: { type: "string", enum: ["income", "expense"] },
-          amount: { type: "string", description: "Minor units string" },
+          amount: { type: "number" },
           currency: { type: "string", pattern: "^[A-Z]{3}$" },
           description: { type: "string", nullable: true },
           reference: { type: "string", nullable: true },
@@ -388,7 +388,7 @@ export const openApiDocument = {
           invoiceId: { type: "string", format: "uuid" },
           description: { type: "string" },
           quantity: { type: "string" },
-          unitPrice: { type: "string" },
+          unitPrice: { type: "number" },
           sortOrder: { type: "integer" },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
@@ -411,9 +411,9 @@ export const openApiDocument = {
           sentAt: { type: "string", format: "date-time", nullable: true },
           paidAt: { type: "string", format: "date-time", nullable: true },
           voidedAt: { type: "string", format: "date-time", nullable: true },
-          subtotal: { type: "string" },
-          taxAmount: { type: "string" },
-          total: { type: "string" },
+          subtotal: { type: "number" },
+          taxAmount: { type: "number" },
+          total: { type: "number" },
           items: {
             type: "array",
             items: { $ref: "#/components/schemas/InvoiceItem" },
@@ -986,7 +986,7 @@ export const openApiDocument = {
             description: "Transaction created",
             content: {
               "application/json": {
-                schema: successEnvelope("#/components/schemas/Transaction"),
+                schema: successEnvelopeNoMeta("#/components/schemas/Transaction"),
               },
             },
           },
@@ -1004,7 +1004,7 @@ export const openApiDocument = {
             description: "Transaction fetched",
             content: {
               "application/json": {
-                schema: successEnvelope("#/components/schemas/Transaction"),
+                schema: successEnvelopeNoMeta("#/components/schemas/Transaction"),
               },
             },
           },
@@ -1028,7 +1028,7 @@ export const openApiDocument = {
             description: "Transaction updated",
             content: {
               "application/json": {
-                schema: successEnvelope("#/components/schemas/Transaction"),
+                schema: successEnvelopeNoMeta("#/components/schemas/Transaction"),
               },
             },
           },
@@ -1044,7 +1044,7 @@ export const openApiDocument = {
             description: "Transaction archived",
             content: {
               "application/json": {
-                schema: successEnvelope("#/components/schemas/GenericMessage"),
+                schema: successEnvelopeNoMeta("#/components/schemas/GenericMessage"),
               },
             },
           },
@@ -1069,7 +1069,7 @@ export const openApiDocument = {
             description: "Import queued",
             content: {
               "application/json": {
-                schema: successEnvelope("#/components/schemas/QueuedImportResponse"),
+                schema: successEnvelopeNoMeta("#/components/schemas/QueuedImportResponse"),
               },
             },
           },

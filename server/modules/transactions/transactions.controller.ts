@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { ValidationError } from "../../lib/errors";
-import { paginated, success } from "../../lib/response";
+import { paginated } from "../../lib/response";
 import type { TransactionsService } from "./transactions.service";
 import {
   createTransactionSchema,
@@ -43,7 +43,10 @@ export class TransactionsController {
       req.user!.id,
       paramsResult.data.id,
     );
-    return res.status(200).json(success(transaction));
+    return res.status(200).json({
+      success: true as const,
+      data: transaction,
+    });
   };
 
   createTransaction = async (
@@ -59,7 +62,10 @@ export class TransactionsController {
       req.user!.id,
       bodyResult.data,
     );
-    return res.status(201).json(success(transaction));
+    return res.status(201).json({
+      success: true as const,
+      data: transaction,
+    });
   };
 
   updateTransaction = async (
@@ -80,7 +86,10 @@ export class TransactionsController {
       paramsResult.data.id,
       bodyResult.data,
     );
-    return res.status(200).json(success(transaction));
+    return res.status(200).json({
+      success: true as const,
+      data: transaction,
+    });
   };
 
   deleteTransaction = async (req: Request<TransactionIdParam>, res: Response) => {
@@ -93,7 +102,10 @@ export class TransactionsController {
       req.user!.id,
       paramsResult.data.id,
     );
-    return res.status(200).json(success(result));
+    return res.status(200).json({
+      success: true as const,
+      data: result,
+    });
   };
 
   importTransactions = async (
@@ -109,7 +121,10 @@ export class TransactionsController {
       req.user!.id,
       bodyResult.data,
     );
-    return res.status(201).json(success(result));
+    return res.status(201).json({
+      success: true as const,
+      data: result,
+    });
   };
 
   queueImportTransactions = async (
@@ -125,6 +140,9 @@ export class TransactionsController {
       req.user!.id,
       bodyResult.data,
     );
-    return res.status(202).json(success(result));
+    return res.status(202).json({
+      success: true as const,
+      data: result,
+    });
   };
 }

@@ -1,7 +1,7 @@
 import { and, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
 import { db } from "../../db";
 import { BadRequestError, NotFoundError } from "../../lib/errors";
-import { toMinorUnits } from "../../lib/currency";
+import { toDecimal, toMinorUnits } from "../../lib/currency";
 import { enqueueTransactionImportJob } from "../../lib/queue";
 import { categories, customers, transactions } from "../../../shared/schema";
 import type {
@@ -22,7 +22,7 @@ type TransactionsServiceDeps = {
 function serializeTransaction(row: TransactionRow) {
   return {
     ...row,
-    amount: row.amount.toString(),
+    amount: toDecimal(row.amount, row.currency),
   };
 }
 

@@ -44,11 +44,11 @@ test("getDashboard returns aggregated structure", async () => {
   const result = await service.getDashboard("user-id", {});
 
   assert.equal(Array.isArray(result.revenue), true);
-  assert.equal(result.revenue[0]?.amount, "5000");
-  assert.equal(result.expenses[0]?.amount, "2000");
-  assert.equal(result.net[0]?.amount, "3000");
+  assert.equal(result.revenue[0]?.amount, 50);
+  assert.equal(result.expenses[0]?.amount, 20);
+  assert.equal(result.net[0]?.amount, 30);
   assert.equal(result.outstanding[0]?.invoiceCount, 2);
   assert.equal(result.overdue[0]?.invoiceCount, 1);
-  assert.equal(result.recentTransactions[0]?.amount, "2500");
+  assert.equal(result.recentTransactions[0]?.amount, 25);
   assert.equal(result.recentInvoices[0]?.id, "inv-id");
 });

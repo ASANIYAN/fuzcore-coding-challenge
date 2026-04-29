@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { ValidationError } from "../../lib/errors";
 import { paginated, success } from "../../lib/response";
+import { toDecimal } from "../../lib/currency";
 import type { InvoicesService } from "./invoices.service";
 import {
   createInvoiceSchema,
@@ -17,6 +18,34 @@ import {
 export class InvoicesController {
   constructor(private readonly invoicesService: InvoicesService) {}
 
+  private toMinorNumber(value: unknown, currency: string) {
+    if (typeof value === "string" || typeof value === "number" || typeof value === "bigint") {
+      return toDecimal(BigInt(value), currency);
+    }
+    return value;
+  }
+
+  private serializeInvoiceForResponse<T extends Record<string, unknown>>(invoice: T) {
+    const currency = String(invoice.currency ?? "");
+    const items = Array.isArray(invoice.items)
+      ? invoice.items.map((item) => {
+          const row = item as Record<string, unknown>;
+          return {
+            ...row,
+            unitPrice: this.toMinorNumber(row.unitPrice, currency),
+          };
+        })
+      : invoice.items;
+
+    return {
+      ...invoice,
+      items,
+      subtotal: this.toMinorNumber(invoice.subtotal, currency),
+      taxAmount: this.toMinorNumber(invoice.taxAmount, currency),
+      total: this.toMinorNumber(invoice.total, currency),
+    };
+  }
+
   listInvoices = async (req: Request, res: Response) => {
     const queryResult = listInvoicesQuerySchema.safeParse(req.query);
     if (!queryResult.success) {
@@ -29,7 +58,14 @@ export class InvoicesController {
     );
     return res
       .status(200)
-      .json(paginated(rows, total, queryResult.data.page, queryResult.data.limit));
+      .json(
+        paginated(
+          rows.map((row) => this.serializeInvoiceForResponse(row)),
+          total,
+          queryResult.data.page,
+          queryResult.data.limit,
+        ),
+      );
   };
 
   getInvoice = async (req: Request<InvoiceIdParam>, res: Response) => {
@@ -39,7 +75,7 @@ export class InvoicesController {
     }
 
     const invoice = await this.invoicesService.getInvoiceById(req.user!.id, paramsResult.data.id);
-    return res.status(200).json(success(invoice));
+    return res.status(200).json(success(this.serializeInvoiceForResponse(invoice)));
   };
 
   createInvoice = async (req: Request<unknown, unknown, CreateInvoiceInput>, res: Response) => {
@@ -49,7 +85,7 @@ export class InvoicesController {
     }
 
     const invoice = await this.invoicesService.createInvoice(req.user!.id, bodyResult.data);
-    return res.status(201).json(success(invoice));
+    return res.status(201).json(success(this.serializeInvoiceForResponse(invoice)));
   };
 
   updateInvoice = async (
@@ -70,7 +106,7 @@ export class InvoicesController {
       paramsResult.data.id,
       bodyResult.data,
     );
-    return res.status(200).json(success(invoice));
+    return res.status(200).json(success(this.serializeInvoiceForResponse(invoice)));
   };
 
   updateStatus = async (
@@ -91,7 +127,7 @@ export class InvoicesController {
       paramsResult.data.id,
       bodyResult.data,
     );
-    return res.status(200).json(success(invoice));
+    return res.status(200).json(success(this.serializeInvoiceForResponse(invoice)));
   };
 
   createPaymentLink = async (req: Request<InvoiceIdParam>, res: Response) => {
