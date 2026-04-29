@@ -934,7 +934,7 @@ export const openApiDocument = {
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
         responses: {
           "200": {
-            description: "Category archived",
+            description: "Category deleted",
             content: {
               "application/json": {
                 schema: successEnvelopeNoMeta("#/components/schemas/GenericMessage"),

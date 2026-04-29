@@ -141,7 +141,7 @@ export class CategoriesService {
     }
 
     return {
-      message: "Category archived successfully.",
+      message: "Category deleted successfully.",
     };
   }
 }

@@ -138,11 +138,9 @@ export const categories = pgTable(
   },
   (table) => [
     index("categories_user_id_idx").on(table.userId),
-    uniqueIndex("categories_user_name_type_unique").on(
-      table.userId,
-      table.name,
-      table.type,
-    ),
+    uniqueIndex("categories_user_name_type_unique")
+      .on(table.userId, table.name, table.type)
+      .where(sql`${table.archivedAt} is null`),
   ],
 );
 

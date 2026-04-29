@@ -50,6 +50,20 @@
       "when": 1777448909026,
       "tag": "0006_orange_invisible_woman",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1777453200000,
+      "tag": "0007_categories_partial_unique_active_only",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1777449692473,
+      "tag": "0008_daily_pete_wisdom",
+      "breakpoints": true
     }
   ]
 }
