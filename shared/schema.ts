@@ -109,7 +109,6 @@ export const customers = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
-    archivedAt: timestamp("archived_at", { withTimezone: true }),
   },
   (table) => [
     index("customers_user_id_idx").on(table.userId),

@@ -207,7 +207,6 @@ export const openApiDocument = {
           country: { type: "string", nullable: true },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
-          archivedAt: { type: "string", format: "date-time", nullable: true },
         },
       },
       CreateCustomerRequest: {
