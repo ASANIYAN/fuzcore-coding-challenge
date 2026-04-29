@@ -20,16 +20,16 @@ See [TASK.md](./TASK.md) for the full challenge brief and candidate instructions
 npm run docker:dev
 ```
 
-This starts the full stack (app + PostgreSQL) via Docker Compose. The app will be available at [http://localhost:5000](http://localhost:5000). Hot reload is enabled — changes to source files are reflected immediately.
+This starts the full stack (app + PostgreSQL) via Docker Compose. The app will be available at [http://localhost:5001](http://localhost:5001). Hot reload is enabled — changes to source files are reflected immediately.
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run docker:dev` | Start the full stack with Docker Compose |
-| `npm run db:push` | Push schema changes to the database |
-| `npm run build` | Build for production |
-| `npm run check` | TypeScript type check |
+| Command                  | Description                                             |
+| ------------------------ | ------------------------------------------------------- |
+| `npm run docker:dev`     | Start the full stack with Docker Compose                |
+| `npm run db:push`        | Push schema changes to the database                     |
+| `npm run build`          | Build for production                                    |
+| `npm run check`          | TypeScript type check                                   |
 | `npm run security:check` | Scan for risky patterns and dependency-source anomalies |
 
 ## Project Structure

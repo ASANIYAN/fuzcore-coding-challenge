@@ -2,7 +2,11 @@ import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import PDFDocument from "pdfkit";
 import Stripe from "stripe";
 import { db } from "../../db";
-import { BadRequestError, ForbiddenError, NotFoundError } from "../../lib/errors";
+import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+} from "../../lib/errors";
 import { toDecimal, toMinorUnits } from "../../lib/currency";
 import { env } from "../../lib/env";
 import { enqueueEmailJob } from "../../lib/queue";
@@ -63,7 +67,7 @@ export class InvoicesService {
   private readonly createStripeCheckoutSession: InvoicesServiceDeps["createStripeCheckoutSession"];
 
   private readonly frontendOrigin =
-    env.FRONTEND_ORIGIN ?? "http://localhost:5000";
+    env.FRONTEND_ORIGIN ?? "http://localhost:5001";
 
   constructor(deps?: Partial<InvoicesServiceDeps>) {
     this.db = deps?.db ?? db;
@@ -623,16 +627,24 @@ export class InvoicesService {
       doc.text(`Issue Date: ${issueDate}`);
       doc.text(`Due Date: ${dueDate}`);
       doc.text(`Currency: ${invoice.currency}`);
-      doc.text(`Subtotal: ${formatMoney(BigInt(invoice.subtotal), invoice.currency)}`);
-      doc.text(`Tax: ${formatMoney(BigInt(invoice.taxAmount), invoice.currency)}`);
-      doc.text(`Total: ${formatMoney(BigInt(invoice.total), invoice.currency)}`);
+      doc.text(
+        `Subtotal: ${formatMoney(BigInt(invoice.subtotal), invoice.currency)}`,
+      );
+      doc.text(
+        `Tax: ${formatMoney(BigInt(invoice.taxAmount), invoice.currency)}`,
+      );
+      doc.text(
+        `Total: ${formatMoney(BigInt(invoice.total), invoice.currency)}`,
+      );
       doc.moveDown();
       doc.fontSize(13).text("Line Items");
       doc.moveDown(0.4);
       for (const item of invoice.items) {
         const quantity = Number(item.quantity);
         const unitPriceMinor = BigInt(item.unitPrice);
-        const lineTotalMinor = BigInt(Math.round(quantity * Number(unitPriceMinor)));
+        const lineTotalMinor = BigInt(
+          Math.round(quantity * Number(unitPriceMinor)),
+        );
         doc
           .fontSize(10)
           .text(

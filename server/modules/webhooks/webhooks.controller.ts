@@ -22,6 +22,9 @@ export class WebhooksController {
       "stripe webhook request received",
     );
 
+    console.log(payload, "request payload");
+    console.log(headerValue, "request header values");
+
     const event = this.webhooksService.verifyStripeWebhook(
       payload,
       headerValue,

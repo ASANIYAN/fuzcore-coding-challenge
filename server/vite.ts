@@ -9,10 +9,10 @@ import { randomUUID } from "crypto";
 const viteLogger = createLogger();
 
 export async function setupVite(server: Server, app: Express) {
-  const serverOptions = {
+  const serverOptions: Record<string, unknown> = {
     middlewareMode: true,
     hmr: { server, path: "/vite-hmr" },
-    allowedHosts: true as const,
+    allowedHosts: true,
   };
 
   const vite = await createViteServer({
