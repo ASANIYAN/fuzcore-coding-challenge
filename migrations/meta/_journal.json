@@ -15,6 +15,13 @@
       "when": 1777419354514,
       "tag": "0001_processed_webhook_events",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777423200000,
+      "tag": "0002_tdd_state_machine_triggers",
+      "breakpoints": true
     }
   ]
 }

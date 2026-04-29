@@ -4,9 +4,11 @@ import { paginated, success } from "../../lib/response";
 import type { TransactionsService } from "./transactions.service";
 import {
   createTransactionSchema,
+  importTransactionsSchema,
   listTransactionsQuerySchema,
   transactionIdParamSchema,
   type CreateTransactionInput,
+  type ImportTransactionsInput,
   type TransactionIdParam,
   type UpdateTransactionInput,
   updateTransactionSchema,
@@ -92,5 +94,21 @@ export class TransactionsController {
       paramsResult.data.id,
     );
     return res.status(200).json(success(result));
+  };
+
+  importTransactions = async (
+    req: Request<unknown, unknown, ImportTransactionsInput>,
+    res: Response,
+  ) => {
+    const bodyResult = importTransactionsSchema.safeParse(req.body);
+    if (!bodyResult.success) {
+      throw new ValidationError(bodyResult.error.issues);
+    }
+
+    const result = await this.transactionsService.importTransactions(
+      req.user!.id,
+      bodyResult.data,
+    );
+    return res.status(201).json(success(result));
   };
 }

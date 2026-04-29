@@ -19,21 +19,21 @@ export const authRouter = Router();
 
 authRouter.post(
   "/signup",
-  rateLimit("auth-signup"),
+  rateLimit("auth-strict"),
   validate(signupSchema),
   authController.signup,
 );
 
 authRouter.post(
   "/verify-email",
-  rateLimit("auth-verify-email"),
+  rateLimit("auth-strict"),
   validate(verifyEmailSchema),
   authController.verifyEmail,
 );
 
 authRouter.post(
   "/login",
-  rateLimit("auth-login"),
+  rateLimit("auth-strict"),
   validate(loginSchema),
   authController.login,
 );
@@ -42,14 +42,14 @@ authRouter.post("/logout", requireAuth, authController.logout);
 
 authRouter.post(
   "/forgot-password",
-  rateLimit("auth-forgot-password"),
+  rateLimit("auth-strict"),
   validate(forgotPasswordSchema),
   authController.forgotPassword,
 );
 
 authRouter.post(
   "/reset-password",
-  rateLimit("auth-reset-password"),
+  rateLimit("auth-strict"),
   validate(resetPasswordSchema),
   authController.resetPassword,
 );

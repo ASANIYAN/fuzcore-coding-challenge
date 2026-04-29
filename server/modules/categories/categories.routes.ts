@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireAuth } from "../../middleware/auth.middleware";
+import { rateLimit } from "../../middleware/rate-limit.middleware";
 import { validate } from "../../middleware/validate.middleware";
 import { CategoriesController } from "./categories.controller";
 import { CategoriesService } from "./categories.service";
@@ -10,7 +11,7 @@ const categoriesController = new CategoriesController(categoriesService);
 
 export const categoriesRouter = Router();
 
-categoriesRouter.use(requireAuth);
+categoriesRouter.use(requireAuth, rateLimit("standard-user-minute"));
 
 categoriesRouter.get("/", categoriesController.listCategories);
 categoriesRouter.get("/:id", categoriesController.getCategory);

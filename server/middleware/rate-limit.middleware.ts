@@ -3,26 +3,20 @@ import { AppError } from "../lib/errors";
 import { getRedisClient } from "../lib/redis";
 
 const RATE_LIMIT_RULES: Record<string, { max: number; windowSeconds: number }> = {
-  "auth-signup": { max: 5, windowSeconds: 15 * 60 },
-  "auth-verify-email": { max: 10, windowSeconds: 15 * 60 },
-  "auth-login": { max: 10, windowSeconds: 15 * 60 },
-  "auth-forgot-password": { max: 5, windowSeconds: 15 * 60 },
-  "auth-reset-password": { max: 10, windowSeconds: 15 * 60 },
+  "auth-strict": { max: 5, windowSeconds: 15 * 60 },
+  "moderate-user-hourly": { max: 20, windowSeconds: 60 * 60 },
+  "standard-user-minute": { max: 100, windowSeconds: 60 },
 };
 
-export const rateLimit = (_key: string) => {
+export const rateLimit = (ruleKey: keyof typeof RATE_LIMIT_RULES) => {
   return async (req: Request, _res: Response, next: NextFunction) => {
     try {
-      const key = _key in RATE_LIMIT_RULES ? _key : "default";
-      const rule =
-        RATE_LIMIT_RULES[key] ??
-        ({
-          max: 60,
-          windowSeconds: 60,
-        } as const);
+      const rule = RATE_LIMIT_RULES[ruleKey];
       const redis = getRedisClient();
       const clientIp = req.ip || req.headers["x-forwarded-for"] || "unknown";
-      const rateLimitKey = `rate-limit:${key}:${clientIp}`;
+      const principal =
+        ruleKey === "auth-strict" ? String(clientIp) : (req.user?.id ?? String(clientIp));
+      const rateLimitKey = `rate-limit:${ruleKey}:${principal}`;
 
       const count = await redis.incr(rateLimitKey);
       if (count === 1) {

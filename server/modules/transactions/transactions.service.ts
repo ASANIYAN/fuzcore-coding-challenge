@@ -5,6 +5,7 @@ import { toMinorUnits } from "../../lib/currency";
 import { categories, customers, transactions } from "../../../shared/schema";
 import type {
   CreateTransactionInput,
+  ImportTransactionsInput,
   ListTransactionsQuery,
   UpdateTransactionInput,
 } from "./transactions.schema";
@@ -231,5 +232,22 @@ export class TransactionsService {
     }
 
     return { message: "Transaction archived successfully." };
+  }
+
+  async importTransactions(userId: string, input: ImportTransactionsInput) {
+    const created: Array<Awaited<ReturnType<TransactionsService["createTransaction"]>>> = [];
+    for (let i = 0; i < input.items.length; i += 1) {
+      const item = input.items[i];
+      const imported = await this.createTransaction(userId, {
+        ...item,
+        importHash: item.importHash ?? `import-${Date.now()}-${i}`,
+      });
+      created.push(imported);
+    }
+
+    return {
+      importedCount: created.length,
+      items: created,
+    };
   }
 }

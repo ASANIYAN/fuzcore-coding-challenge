@@ -44,7 +44,12 @@ export const updateTransactionSchema = z
     message: "At least one field is required",
   });
 
+export const importTransactionsSchema = z.object({
+  items: z.array(createTransactionSchema).min(1).max(500),
+});
+
 export type TransactionIdParam = z.infer<typeof transactionIdParamSchema>;
 export type ListTransactionsQuery = z.infer<typeof listTransactionsQuerySchema>;
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 export type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;
+export type ImportTransactionsInput = z.infer<typeof importTransactionsSchema>;

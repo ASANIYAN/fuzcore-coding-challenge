@@ -102,3 +102,32 @@ test("updateInvoiceStatus throws for invalid transition", async () => {
     },
   );
 });
+
+test("createInvoicePaymentLink throws when invoice is not sent", async () => {
+  const mock = createMockDb();
+  mock.rowsQueue.push([
+    {
+      id: "invoice-id",
+      userId: "user-id",
+      invoiceNumber: 10,
+      status: "draft",
+      currency: "USD",
+      taxRate: null,
+      paymentLink: null,
+    },
+  ]);
+  mock.rowsQueue.push([]);
+
+  const service = new InvoicesService({
+    db: mock.db as never,
+    createStripeCheckoutSession: (async () => ({ url: null })) as never,
+  });
+
+  await assert.rejects(
+    service.createInvoicePaymentLink("user-id", "invoice-id"),
+    (error: unknown) => {
+      assert.equal(error instanceof BadRequestError, true);
+      return true;
+    },
+  );
+});

@@ -1,7 +1,9 @@
 import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import Stripe from "stripe";
 import { db } from "../../db";
 import { BadRequestError, NotFoundError } from "../../lib/errors";
 import { toMinorUnits } from "../../lib/currency";
+import { env } from "../../lib/env";
 import {
   customers,
   invoiceItems,
@@ -19,6 +21,9 @@ type Db = typeof db;
 
 type InvoicesServiceDeps = {
   db: Db;
+  createStripeCheckoutSession: (
+    params: Stripe.Checkout.SessionCreateParams,
+  ) => Promise<{ url: string | null }>;
 };
 
 const ALLOWED_STATUS_TRANSITIONS: Record<
@@ -53,9 +58,20 @@ function buildInvoiceTotals(
 
 export class InvoicesService {
   private readonly db: Db;
+  private readonly createStripeCheckoutSession: InvoicesServiceDeps["createStripeCheckoutSession"];
+
+  private readonly frontendOrigin = env.FRONTEND_ORIGIN ?? "http://localhost:5173";
 
   constructor(deps?: Partial<InvoicesServiceDeps>) {
     this.db = deps?.db ?? db;
+    this.createStripeCheckoutSession =
+      deps?.createStripeCheckoutSession ??
+      (async (params) => {
+        const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
+          apiVersion: "2025-08-27.basil",
+        });
+        return stripe.checkout.sessions.create(params);
+      });
   }
 
   private async ensureCustomerForUser(userId: string, customerId: string) {
@@ -179,6 +195,7 @@ export class InvoicesService {
         .select()
         .from(userInvoiceCounters)
         .where(eq(userInvoiceCounters.userId, userId))
+        .for("update")
         .limit(1);
 
       const nextInvoiceNumber = (counterRow?.lastInvoiceNumber ?? 0) + 1;
@@ -311,5 +328,96 @@ export class InvoicesService {
       .returning();
 
     return this.loadInvoiceWithItems(userId, updated.id);
+  }
+
+  async createInvoicePaymentLink(userId: string, invoiceId: string) {
+    const invoice = await this.loadInvoiceWithItems(userId, invoiceId);
+    if (invoice.status !== "sent") {
+      throw new BadRequestError("Payment link can only be created for sent invoices");
+    }
+
+    if (invoice.paymentLink) {
+      return {
+        paymentLink: invoice.paymentLink,
+      };
+    }
+
+    const totalMinorUnits = Number(invoice.total);
+    if (!Number.isSafeInteger(totalMinorUnits) || totalMinorUnits <= 0) {
+      throw new BadRequestError("Invoice total is invalid for payment link creation");
+    }
+
+    const session = await this.createStripeCheckoutSession({
+      mode: "payment",
+      metadata: {
+        invoiceId: invoice.id,
+      },
+      client_reference_id: invoice.id,
+      success_url: `${this.frontendOrigin}/invoices/${invoice.id}?payment=success`,
+      cancel_url: `${this.frontendOrigin}/invoices/${invoice.id}?payment=cancelled`,
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: invoice.currency.toLowerCase(),
+            unit_amount: totalMinorUnits,
+            product_data: {
+              name: `Invoice #${invoice.invoiceNumber}`,
+            },
+          },
+        },
+      ],
+    });
+
+    if (!session.url) {
+      throw new BadRequestError("Unable to create payment link");
+    }
+
+    await this.db
+      .update(invoices)
+      .set({
+        paymentLink: session.url,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(invoices.id, invoice.id), eq(invoices.userId, userId)));
+
+    return {
+      paymentLink: session.url,
+    };
+  }
+
+  async getInvoicePdf(userId: string, invoiceId: string) {
+    const invoice = await this.loadInvoiceWithItems(userId, invoiceId);
+    const issueDate = new Date(invoice.issueDate).toISOString().slice(0, 10);
+    const dueDate = invoice.dueDate
+      ? new Date(invoice.dueDate).toISOString().slice(0, 10)
+      : "N/A";
+    const pdfText = [
+      `%PDF-1.1`,
+      `1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj`,
+      `2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj`,
+      `3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj`,
+      `4 0 obj<</Length 220>>stream`,
+      `BT /F1 12 Tf 72 740 Td (Invoice #${invoice.invoiceNumber}) Tj T* (Status: ${invoice.status}) Tj T* (Issue Date: ${issueDate}) Tj T* (Due Date: ${dueDate}) Tj T* (Currency: ${invoice.currency}) Tj T* (Total minor units: ${invoice.total}) Tj ET`,
+      `endstream endobj`,
+      `5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj`,
+      `xref`,
+      `0 6`,
+      `0000000000 65535 f `,
+      `0000000010 00000 n `,
+      `0000000053 00000 n `,
+      `0000000108 00000 n `,
+      `0000000238 00000 n `,
+      `0000000535 00000 n `,
+      `trailer<</Size 6/Root 1 0 R>>`,
+      `startxref`,
+      `607`,
+      `%%EOF`,
+    ].join("\n");
+
+    return {
+      fileName: `invoice-${invoice.invoiceNumber}.pdf`,
+      buffer: Buffer.from(pdfText, "utf-8"),
+    };
   }
 }

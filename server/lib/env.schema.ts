@@ -41,6 +41,7 @@ export const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   PORT: z.coerce.number().int().min(1).max(65535).default(5000),
   HOST: optionalString,
+  FRONTEND_ORIGIN: optionalString,
   MAIL_HOST: optionalString,
   MAIL_PORT: optionalPort,
   MAIL_SECURE: optionalBoolean,

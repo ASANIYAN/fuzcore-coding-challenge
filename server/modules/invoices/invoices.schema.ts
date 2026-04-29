@@ -49,6 +49,8 @@ export const updateInvoiceStatusSchema = z.object({
   status: z.enum(["sent", "paid", "void"]),
 });
 
+export const createPaymentLinkSchema = z.object({});
+
 export type InvoiceIdParam = z.infer<typeof invoiceIdParamSchema>;
 export type ListInvoicesQuery = z.infer<typeof listInvoicesQuerySchema>;
 export type InvoiceItemInput = z.infer<typeof invoiceItemInputSchema>;

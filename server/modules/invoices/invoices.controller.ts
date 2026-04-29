@@ -93,4 +93,30 @@ export class InvoicesController {
     );
     return res.status(200).json(success(invoice));
   };
+
+  createPaymentLink = async (req: Request<InvoiceIdParam>, res: Response) => {
+    const paramsResult = invoiceIdParamSchema.safeParse(req.params);
+    if (!paramsResult.success) {
+      throw new ValidationError(paramsResult.error.issues);
+    }
+
+    const data = await this.invoicesService.createInvoicePaymentLink(
+      req.user!.id,
+      paramsResult.data.id,
+    );
+
+    return res.status(200).json(success(data));
+  };
+
+  getInvoicePdf = async (req: Request<InvoiceIdParam>, res: Response) => {
+    const paramsResult = invoiceIdParamSchema.safeParse(req.params);
+    if (!paramsResult.success) {
+      throw new ValidationError(paramsResult.error.issues);
+    }
+
+    const pdf = await this.invoicesService.getInvoicePdf(req.user!.id, paramsResult.data.id);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename=\"${pdf.fileName}\"`);
+    return res.status(200).send(pdf.buffer);
+  };
 }
