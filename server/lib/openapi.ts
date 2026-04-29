@@ -1420,33 +1420,5 @@ export const openApiDocument = {
         },
       },
     },
-    "/api/webhooks/stripe": {
-      post: {
-        tags: ["Webhooks"],
-        summary: "Stripe webhook endpoint",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                additionalProperties: true,
-              },
-            },
-          },
-        },
-        responses: {
-          "200": {
-            description: "Webhook acknowledged",
-            content: {
-              "application/json": {
-                schema: successEnvelope("#/components/schemas/WebhookAck"),
-              },
-            },
-          },
-          "400": { description: "Invalid signature" },
-        },
-      },
-    },
   },
 } as const;
