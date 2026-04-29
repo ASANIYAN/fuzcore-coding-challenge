@@ -273,7 +273,7 @@ export class AuthService {
     const user = userRows[0];
     if (!user) {
       return {
-        message: "If that email exists, a reset code has been sent.",
+        message: "If an account with the email exists, a reset code has been sent.",
       };
     }
 
@@ -311,7 +311,7 @@ export class AuthService {
     });
 
     return {
-      message: "If that email exists, a reset code has been sent.",
+      message: "If an account with the email exists, a reset code has been sent.",
     };
   }
 
