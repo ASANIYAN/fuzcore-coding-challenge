@@ -22,7 +22,6 @@ type TransactionsServiceDeps = {
 function serializeTransaction(row: TransactionRow) {
   return {
     ...row,
-    importHash: undefined,
     amount: toDecimal(row.amount, row.currency),
   };
 }
@@ -154,7 +153,6 @@ export class TransactionsService {
         currency: input.currency,
         description: input.description ?? null,
         reference: input.reference ?? null,
-        importHash: input.importHash ?? null,
         transactionDate: input.transactionDate,
       })
       .returning();
@@ -205,7 +203,6 @@ export class TransactionsService {
         currency: effectiveCurrency,
         description: input.description === undefined ? existing.description : input.description,
         reference: input.reference === undefined ? existing.reference : input.reference,
-        importHash: input.importHash === undefined ? existing.importHash : input.importHash,
         transactionDate: input.transactionDate ?? existing.transactionDate,
         updatedAt: new Date(),
       })
@@ -246,7 +243,6 @@ export class TransactionsService {
       const imported = await this.createTransaction(userId, {
         ...item,
         transactionDate: new Date(item.transactionDate),
-        importHash: item.importHash ?? `import-${Date.now()}-${i}`,
       });
       created.push(imported);
     }

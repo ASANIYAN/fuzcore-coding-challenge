@@ -16,7 +16,6 @@ export type TransactionImportItem = {
   currency: string;
   description?: string | null;
   reference?: string | null;
-  importHash?: string | null;
   transactionDate: Date;
 };
 

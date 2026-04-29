@@ -24,7 +24,6 @@ export const createTransactionSchema = z.object({
   currency: currencySchema,
   description: z.string().trim().optional().nullable(),
   reference: z.string().trim().optional().nullable(),
-  importHash: z.string().trim().optional().nullable(),
   transactionDate: z.coerce.date(),
 });
 
@@ -37,7 +36,6 @@ export const updateTransactionSchema = z
     currency: currencySchema.optional(),
     description: z.string().trim().optional().nullable(),
     reference: z.string().trim().optional().nullable(),
-    importHash: z.string().trim().optional().nullable(),
     transactionDate: z.coerce.date().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {

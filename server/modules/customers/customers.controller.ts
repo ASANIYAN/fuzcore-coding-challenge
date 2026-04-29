@@ -29,7 +29,9 @@ export class CustomersController {
 
     return res
       .status(200)
-      .json(paginated(rows, total, queryResult.data.page, queryResult.data.limit));
+      .json(
+        paginated(rows, total, queryResult.data.page, queryResult.data.limit),
+      );
   };
 
   getCustomer = async (req: Request<CustomerIdParam>, res: Response) => {
@@ -49,13 +51,19 @@ export class CustomersController {
     });
   };
 
-  createCustomer = async (req: Request<unknown, unknown, CreateCustomerInput>, res: Response) => {
+  createCustomer = async (
+    req: Request<unknown, unknown, CreateCustomerInput>,
+    res: Response,
+  ) => {
     const bodyResult = createCustomerSchema.safeParse(req.body);
     if (!bodyResult.success) {
       throw new ValidationError(bodyResult.error.issues);
     }
 
-    const customer = await this.customersService.createCustomer(req.user!.id, bodyResult.data);
+    const customer = await this.customersService.createCustomer(
+      req.user!.id,
+      bodyResult.data,
+    );
     return res.status(201).json({
       success: true as const,
       data: customer,

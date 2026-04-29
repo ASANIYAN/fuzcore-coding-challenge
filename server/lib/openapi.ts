@@ -329,7 +329,6 @@ export const openApiDocument = {
           currency: { type: "string", pattern: "^[A-Z]{3}$" },
           description: { type: "string", nullable: true },
           reference: { type: "string", nullable: true },
-          importHash: { type: "string", nullable: true },
           transactionDate: { type: "string", format: "date-time" },
         },
       },
@@ -343,7 +342,6 @@ export const openApiDocument = {
           currency: { type: "string", pattern: "^[A-Z]{3}$" },
           description: { type: "string", nullable: true },
           reference: { type: "string", nullable: true },
-          importHash: { type: "string", nullable: true },
           transactionDate: { type: "string", format: "date-time" },
         },
       },
@@ -1035,7 +1033,7 @@ export const openApiDocument = {
       },
       delete: {
         tags: ["Transactions"],
-        summary: "Archive transaction",
+        summary: "Delete Transaction",
         security: [{ cookieAuth: [] }],
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
         responses: {
