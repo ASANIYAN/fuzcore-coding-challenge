@@ -8,6 +8,15 @@ const successEnvelope = (dataSchemaRef: string) => ({
   },
 });
 
+const successEnvelopeNoMeta = (dataSchemaRef: string) => ({
+  type: "object",
+  required: ["success", "data"],
+  properties: {
+    success: { type: "boolean", enum: [true] },
+    data: { $ref: dataSchemaRef },
+  },
+});
+
 const paginatedEnvelope = (itemSchemaRef: string) => ({
   type: "object",
   required: ["success", "data", "meta"],
@@ -64,7 +73,12 @@ export const openApiDocument = {
           error: {
             code: "VALIDATION_ERROR",
             message: "Validation failed",
-            details: [{ path: ["email"], message: "Invalid email" }],
+            details: [
+              {
+                path: ["password"],
+                message: "Password must contain at least 8 character(s)",
+              },
+            ],
           },
         },
         properties: {
@@ -75,7 +89,22 @@ export const openApiDocument = {
             properties: {
               code: { type: "string" },
               message: { type: "string" },
-              details: { type: "array", items: {} },
+              details: {
+                type: "array",
+                items: {
+                  type: "object",
+                  required: ["path", "message"],
+                  properties: {
+                    path: {
+                      type: "array",
+                      items: {
+                        oneOf: [{ type: "string" }, { type: "number" }],
+                      },
+                    },
+                    message: { type: "string" },
+                  },
+                },
+              },
             },
           },
         },
@@ -498,12 +527,22 @@ export const openApiDocument = {
             description: "Signup accepted",
             content: {
               "application/json": {
-                schema: successEnvelope("#/components/schemas/AuthMessage"),
+                schema: successEnvelopeNoMeta("#/components/schemas/AuthMessage"),
               },
             },
           },
-          "400": { description: "Validation error" },
-          "409": { description: "Conflict" },
+          "400": {
+            description: "Validation error",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } },
+          },
+          "409": {
+            description: "Conflict",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } },
+          },
+          "429": {
+            description: "Too many requests",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } },
+          },
         },
       },
     },
@@ -524,11 +563,18 @@ export const openApiDocument = {
             description: "Email verified",
             content: {
               "application/json": {
-                schema: successEnvelope("#/components/schemas/AuthMessage"),
+                schema: successEnvelopeNoMeta("#/components/schemas/AuthMessage"),
               },
             },
           },
-          "400": { description: "Invalid verification code" },
+          "400": {
+            description: "Invalid verification code",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } },
+          },
+          "429": {
+            description: "Too many requests",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } },
+          },
         },
       },
     },
@@ -549,11 +595,22 @@ export const openApiDocument = {
             description: "Login successful",
             content: {
               "application/json": {
-                schema: successEnvelope("#/components/schemas/AuthMessage"),
+                schema: successEnvelopeNoMeta("#/components/schemas/AuthMessage"),
               },
             },
           },
-          "401": { description: "Unauthorized" },
+          "400": {
+            description: "Validation error",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } },
+          },
+          "401": {
+            description: "Unauthorized",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } },
+          },
+          "429": {
+            description: "Too many requests",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } },
+          },
         },
       },
     },
@@ -567,9 +624,13 @@ export const openApiDocument = {
             description: "Logout successful",
             content: {
               "application/json": {
-                schema: successEnvelope("#/components/schemas/AuthMessage"),
+                schema: successEnvelopeNoMeta("#/components/schemas/AuthMessage"),
               },
             },
+          },
+          "401": {
+            description: "Unauthorized",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } },
           },
         },
       },
@@ -591,9 +652,17 @@ export const openApiDocument = {
             description: "OTP dispatch accepted",
             content: {
               "application/json": {
-                schema: successEnvelope("#/components/schemas/AuthMessage"),
+                schema: successEnvelopeNoMeta("#/components/schemas/AuthMessage"),
               },
             },
+          },
+          "400": {
+            description: "Validation error",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } },
+          },
+          "429": {
+            description: "Too many requests",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } },
           },
         },
       },
@@ -615,11 +684,18 @@ export const openApiDocument = {
             description: "Password reset successful",
             content: {
               "application/json": {
-                schema: successEnvelope("#/components/schemas/AuthMessage"),
+                schema: successEnvelopeNoMeta("#/components/schemas/AuthMessage"),
               },
             },
           },
-          "400": { description: "Invalid OTP" },
+          "400": {
+            description: "Invalid OTP or validation failure",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } },
+          },
+          "429": {
+            description: "Too many requests",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } },
+          },
         },
       },
     },

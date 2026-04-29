@@ -3,7 +3,7 @@ import { AppError } from "../lib/errors";
 import { getRedisClient } from "../lib/redis";
 
 const RATE_LIMIT_RULES: Record<string, { max: number; windowSeconds: number }> = {
-  "auth-strict": { max: 5, windowSeconds: 15 * 60 },
+  "auth-strict": { max: 15, windowSeconds: 15 * 60 },
   "moderate-user-hourly": { max: 20, windowSeconds: 60 * 60 },
   "standard-user-minute": { max: 100, windowSeconds: 60 },
 };
