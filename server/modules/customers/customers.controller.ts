@@ -43,7 +43,10 @@ export class CustomersController {
       paramsResult.data.id,
     );
 
-    return res.status(200).json(success(customer));
+    return res.status(200).json({
+      success: true as const,
+      data: customer,
+    });
   };
 
   createCustomer = async (req: Request<unknown, unknown, CreateCustomerInput>, res: Response) => {
@@ -77,7 +80,10 @@ export class CustomersController {
       paramsResult.data.id,
       bodyResult.data,
     );
-    return res.status(200).json(success(customer));
+    return res.status(200).json({
+      success: true as const,
+      data: customer,
+    });
   };
 
   deleteCustomer = async (req: Request<CustomerIdParam>, res: Response) => {
