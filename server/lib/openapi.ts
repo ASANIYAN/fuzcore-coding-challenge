@@ -1,3 +1,7 @@
+import { SUPPORTED_CURRENCY_CODES } from "./currency";
+
+const currencyEnum = [...SUPPORTED_CURRENCY_CODES];
+
 const successEnvelope = (dataSchemaRef: string) => ({
   type: "object",
   required: ["success", "data", "meta"],
@@ -50,6 +54,7 @@ export const openApiDocument = {
   servers: [{ url: "/" }],
   tags: [
     { name: "Auth" },
+    { name: "Currencies" },
     { name: "Customers" },
     { name: "Categories" },
     { name: "Transactions" },
@@ -299,7 +304,7 @@ export const openApiDocument = {
           categoryId: { type: "string", format: "uuid" },
           type: { type: "string", enum: ["income", "expense"] },
           amount: { type: "number" },
-          currency: { type: "string", pattern: "^[A-Z]{3}$" },
+          currency: { type: "string", enum: currencyEnum },
           description: { type: "string", nullable: true },
           reference: { type: "string", nullable: true },
           transactionDate: { type: "string", format: "date-time" },
@@ -324,7 +329,7 @@ export const openApiDocument = {
           customerId: { type: "string", format: "uuid", nullable: true },
           categoryId: { type: "string", format: "uuid" },
           amount: { type: "number", exclusiveMinimum: 0 },
-          currency: { type: "string", pattern: "^[A-Z]{3}$" },
+          currency: { type: "string", enum: currencyEnum },
           description: { type: "string", nullable: true },
           reference: { type: "string", nullable: true },
           transactionDate: { type: "string", format: "date-time" },
@@ -336,7 +341,7 @@ export const openApiDocument = {
           customerId: { type: "string", format: "uuid", nullable: true },
           categoryId: { type: "string", format: "uuid" },
           amount: { type: "number", exclusiveMinimum: 0 },
-          currency: { type: "string", pattern: "^[A-Z]{3}$" },
+          currency: { type: "string", enum: currencyEnum },
           description: { type: "string", nullable: true },
           reference: { type: "string", nullable: true },
           transactionDate: { type: "string", format: "date-time" },
@@ -411,7 +416,7 @@ export const openApiDocument = {
           customerId: { type: "string", format: "uuid" },
           invoiceNumber: { type: "integer" },
           status: { type: "string", enum: ["draft", "sent", "paid", "void"] },
-          currency: { type: "string" },
+          currency: { type: "string", enum: currencyEnum },
           taxRate: { type: "string", nullable: true },
           issueDate: { type: "string", format: "date-time" },
           dueDate: { type: "string", format: "date-time", nullable: true },
@@ -450,7 +455,7 @@ export const openApiDocument = {
         },
         properties: {
           customerId: { type: "string", format: "uuid" },
-          currency: { type: "string", pattern: "^[A-Z]{3}$" },
+          currency: { type: "string", enum: currencyEnum },
           taxRate: { type: "number", minimum: 0, maximum: 100, nullable: true },
           issueDate: { type: "string", format: "date-time" },
           dueDate: { type: "string", format: "date-time", nullable: true },
@@ -524,6 +529,15 @@ export const openApiDocument = {
         },
         properties: {
           received: { type: "boolean" },
+        },
+      },
+      Currency: {
+        type: "object",
+        required: ["code", "name", "symbol"],
+        properties: {
+          code: { type: "string", pattern: "^[A-Z]{3}$" },
+          name: { type: "string" },
+          symbol: { type: "string" },
         },
       },
     },
@@ -735,6 +749,32 @@ export const openApiDocument = {
           "429": {
             description: "Too many requests",
             content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } },
+          },
+        },
+      },
+    },
+    "/api/currencies": {
+      get: {
+        tags: ["Currencies"],
+        summary: "List supported currencies",
+        responses: {
+          "200": {
+            description: "Currencies fetched",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["success", "data"],
+                  properties: {
+                    success: { type: "boolean", enum: [true] },
+                    data: {
+                      type: "array",
+                      items: { $ref: "#/components/schemas/Currency" },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },

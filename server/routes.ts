@@ -4,6 +4,7 @@ import { openApiDocument } from "./lib/openapi";
 import { authRouter } from "./modules/auth/auth.routes";
 import { categoriesRouter } from "./modules/categories/categories.routes";
 import { customersRouter } from "./modules/customers/customers.routes";
+import { currenciesRouter } from "./modules/currencies/currencies.routes";
 import { dashboardRouter } from "./modules/dashboard/dashboard.routes";
 import { invoicesRouter } from "./modules/invoices/invoices.routes";
 import { transactionsRouter } from "./modules/transactions/transactions.routes";
@@ -17,6 +18,7 @@ export async function registerRoutes(app: Express) {
 
   app.use("/api/auth", authRouter);
   app.use("/api/categories", categoriesRouter);
+  app.use("/api/currencies", currenciesRouter);
   app.use("/api/customers", customersRouter);
   app.use("/api/dashboard", dashboardRouter);
   app.use("/api/invoices", invoicesRouter);

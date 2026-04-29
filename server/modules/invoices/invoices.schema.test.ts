@@ -34,6 +34,23 @@ test("createInvoiceSchema rejects empty items", () => {
   assert.equal(result.success, false);
 });
 
+test("createInvoiceSchema rejects unsupported currency", () => {
+  const result = createInvoiceSchema.safeParse({
+    customerId: "550e8400-e29b-41d4-a716-446655440000",
+    currency: "JPY",
+    issueDate: new Date().toISOString(),
+    items: [
+      {
+        description: "Consulting",
+        quantity: 2,
+        unitPrice: 100,
+        sortOrder: 0,
+      },
+    ],
+  });
+  assert.equal(result.success, false);
+});
+
 test("listInvoicesQuerySchema parses defaults", () => {
   const result = listInvoicesQuerySchema.parse({});
   assert.equal(result.page, 1);

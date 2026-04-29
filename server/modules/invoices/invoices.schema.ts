@@ -1,6 +1,13 @@
 import { z } from "zod";
+import { isSupportedCurrency } from "../../lib/currency";
 
-const currencySchema = z.string().trim().regex(/^[A-Z]{3}$/);
+const currencySchema = z
+  .string()
+  .trim()
+  .regex(/^[A-Z]{3}$/)
+  .refine((value) => isSupportedCurrency(value), {
+    message: "Unsupported currency",
+  });
 
 export const invoiceIdParamSchema = z.object({
   id: z.string().uuid(),

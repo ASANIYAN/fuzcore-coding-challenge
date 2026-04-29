@@ -26,6 +26,16 @@ test("createTransactionSchema rejects invalid currency", () => {
   assert.equal(result.success, false);
 });
 
+test("createTransactionSchema rejects unsupported currency", () => {
+  const result = createTransactionSchema.safeParse({
+    categoryId: "550e8400-e29b-41d4-a716-446655440000",
+    amount: 99.99,
+    currency: "JPY",
+    transactionDate: new Date().toISOString(),
+  });
+  assert.equal(result.success, false);
+});
+
 test("listTransactionsQuerySchema parses defaults", () => {
   const result = listTransactionsQuerySchema.parse({});
   assert.equal(result.page, 1);

@@ -2,7 +2,11 @@ import { createHash } from "node:crypto";
 import { and, desc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
 import { db } from "../../db";
 import { BadRequestError, ConflictError, NotFoundError } from "../../lib/errors";
-import { toDecimal, toMinorUnits } from "../../lib/currency";
+import {
+  isSupportedCurrency,
+  toDecimal,
+  toMinorUnits,
+} from "../../lib/currency";
 import { enqueueTransactionImportJob } from "../../lib/queue";
 import {
   categories,
@@ -231,7 +235,7 @@ export class TransactionsService {
         errors.push({ row: i + 1, reason: "Invalid amount" });
         continue;
       }
-      if (!currency || !/^[A-Z]{3}$/.test(currency)) {
+      if (!currency || !/^[A-Z]{3}$/.test(currency) || !isSupportedCurrency(currency)) {
         errors.push({ row: i + 1, reason: "Invalid currency code" });
         continue;
       }
