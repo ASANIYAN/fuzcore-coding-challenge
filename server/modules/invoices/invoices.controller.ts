@@ -27,6 +27,8 @@ export class InvoicesController {
 
   private serializeInvoiceForResponse<T extends Record<string, unknown>>(invoice: T) {
     const currency = String(invoice.currency ?? "");
+    const normalizedTaxRate =
+      invoice.taxRate == null ? null : Number(invoice.taxRate);
     const items = Array.isArray(invoice.items)
       ? invoice.items.map((item) => {
           const row = item as Record<string, unknown>;
@@ -39,6 +41,7 @@ export class InvoicesController {
 
     return {
       ...invoice,
+      taxRate: normalizedTaxRate,
       items,
       subtotal: this.toMinorNumber(invoice.subtotal, currency),
       taxAmount: this.toMinorNumber(invoice.taxAmount, currency),
