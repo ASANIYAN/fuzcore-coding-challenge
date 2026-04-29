@@ -161,6 +161,7 @@ export class DashboardService {
       })),
       recentTransactions: recentTransactions.map((item) => ({
         ...item,
+        importHash: undefined,
         amount: toDecimal(item.amount, item.currency),
       })),
       recentInvoices,
