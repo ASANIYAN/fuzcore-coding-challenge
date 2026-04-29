@@ -23,7 +23,7 @@ transactionsRouter.post(
   "/import",
   rateLimit("moderate-user-hourly"),
   validate(importTransactionsSchema),
-  transactionsController.importTransactions,
+  transactionsController.queueImportTransactions,
 );
 transactionsRouter.post(
   "/",

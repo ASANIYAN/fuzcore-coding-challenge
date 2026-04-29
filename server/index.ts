@@ -4,6 +4,7 @@ import { env } from "./lib/env";
 import { logger } from "./lib/logger";
 import { getRedisClient } from "./lib/redis";
 import { startEmailWorker } from "./workers/email.worker";
+import { startTransactionImportWorker } from "./workers/transaction-import.worker";
 
 let httpServer = createServer();
 
@@ -86,6 +87,7 @@ async function startServer(port: number) {
   logger.info("redis connected");
 
   startEmailWorker();
+  startTransactionImportWorker();
 
   const app = await createApp();
   httpServer = createServer(app);

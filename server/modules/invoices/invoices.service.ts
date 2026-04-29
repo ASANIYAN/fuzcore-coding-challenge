@@ -1,13 +1,16 @@
 import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import PDFDocument from "pdfkit";
 import Stripe from "stripe";
 import { db } from "../../db";
 import { BadRequestError, NotFoundError } from "../../lib/errors";
 import { toMinorUnits } from "../../lib/currency";
 import { env } from "../../lib/env";
+import { enqueueEmailJob } from "../../lib/queue";
 import {
   customers,
   invoiceItems,
   invoices,
+  users,
   userInvoiceCounters,
 } from "../../../shared/schema";
 import type {
@@ -21,6 +24,7 @@ type Db = typeof db;
 
 type InvoicesServiceDeps = {
   db: Db;
+  enqueueEmail: typeof enqueueEmailJob;
   createStripeCheckoutSession: (
     params: Stripe.Checkout.SessionCreateParams,
   ) => Promise<{ url: string | null }>;
@@ -58,12 +62,14 @@ function buildInvoiceTotals(
 
 export class InvoicesService {
   private readonly db: Db;
+  private readonly enqueueEmail: typeof enqueueEmailJob;
   private readonly createStripeCheckoutSession: InvoicesServiceDeps["createStripeCheckoutSession"];
 
   private readonly frontendOrigin = env.FRONTEND_ORIGIN ?? "http://localhost:5173";
 
   constructor(deps?: Partial<InvoicesServiceDeps>) {
     this.db = deps?.db ?? db;
+    this.enqueueEmail = deps?.enqueueEmail ?? enqueueEmailJob;
     this.createStripeCheckoutSession =
       deps?.createStripeCheckoutSession ??
       (async (params) => {
@@ -310,18 +316,67 @@ export class InvoicesService {
       );
     }
 
+    if (input.status === "sent") {
+      const invoiceWithItems = await this.loadInvoiceWithItems(userId, invoiceId);
+      const paymentLink =
+        invoiceWithItems.paymentLink ??
+        (await this.createStripePaymentLinkForInvoice(invoiceWithItems));
+      const now = new Date();
+
+      const [updated] = await this.db.transaction(async (tx) => {
+        const [locked] = await tx
+          .select()
+          .from(invoices)
+          .where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)))
+          .for("update")
+          .limit(1);
+
+        if (!locked) {
+          throw new NotFoundError("Invoice");
+        }
+        if (locked.status !== "draft") {
+          throw new BadRequestError("Only draft invoices can transition to sent");
+        }
+
+        return tx
+          .update(invoices)
+          .set({
+            status: "sent",
+            sentAt: now,
+            paymentLink,
+            updatedAt: now,
+          })
+          .where(eq(invoices.id, invoiceId))
+          .returning();
+      });
+
+      const [owner] = await this.db
+        .select({
+          email: users.email,
+        })
+        .from(users)
+        .where(eq(users.id, updated.userId))
+        .limit(1);
+      if (owner?.email) {
+        await this.enqueueEmail({
+          to: owner.email,
+          subject: `Invoice #${updated.invoiceNumber} sent`,
+          text: `Invoice #${updated.invoiceNumber} was sent successfully.`,
+        });
+      }
+
+      return this.loadInvoiceWithItems(userId, updated.id);
+    }
+
     const now = new Date();
     const [updated] = await this.db
       .update(invoices)
       .set({
         status: input.status,
-        sentAt: input.status === "sent" ? now : existing.sentAt,
+        sentAt: existing.sentAt,
         paidAt: input.status === "paid" ? now : existing.paidAt,
         voidedAt: input.status === "void" ? now : existing.voidedAt,
-        paymentLink:
-          input.status === "sent" && !existing.paymentLink
-            ? `https://pay.example.com/invoices/${existing.id}`
-            : existing.paymentLink,
+        paymentLink: existing.paymentLink,
         updatedAt: now,
       })
       .where(eq(invoices.id, invoiceId))
@@ -342,6 +397,24 @@ export class InvoicesService {
       };
     }
 
+    const paymentLink = await this.createStripePaymentLinkForInvoice(invoice);
+
+    await this.db
+      .update(invoices)
+      .set({
+        paymentLink,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(invoices.id, invoice.id), eq(invoices.userId, userId)));
+
+    return {
+      paymentLink,
+    };
+  }
+
+  private async createStripePaymentLinkForInvoice(
+    invoice: Awaited<ReturnType<InvoicesService["loadInvoiceWithItems"]>>,
+  ) {
     const totalMinorUnits = Number(invoice.total);
     if (!Number.isSafeInteger(totalMinorUnits) || totalMinorUnits <= 0) {
       throw new BadRequestError("Invoice total is invalid for payment link creation");
@@ -373,51 +446,47 @@ export class InvoicesService {
       throw new BadRequestError("Unable to create payment link");
     }
 
-    await this.db
-      .update(invoices)
-      .set({
-        paymentLink: session.url,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(invoices.id, invoice.id), eq(invoices.userId, userId)));
-
-    return {
-      paymentLink: session.url,
-    };
+    return session.url;
   }
 
   async getInvoicePdf(userId: string, invoiceId: string) {
     const invoice = await this.loadInvoiceWithItems(userId, invoiceId);
     const issueDate = new Date(invoice.issueDate).toISOString().slice(0, 10);
-    const dueDate = invoice.dueDate
-      ? new Date(invoice.dueDate).toISOString().slice(0, 10)
-      : "N/A";
-    const pdfText = [
-      `%PDF-1.1`,
-      `1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj`,
-      `2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj`,
-      `3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj`,
-      `4 0 obj<</Length 220>>stream`,
-      `BT /F1 12 Tf 72 740 Td (Invoice #${invoice.invoiceNumber}) Tj T* (Status: ${invoice.status}) Tj T* (Issue Date: ${issueDate}) Tj T* (Due Date: ${dueDate}) Tj T* (Currency: ${invoice.currency}) Tj T* (Total minor units: ${invoice.total}) Tj ET`,
-      `endstream endobj`,
-      `5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj`,
-      `xref`,
-      `0 6`,
-      `0000000000 65535 f `,
-      `0000000010 00000 n `,
-      `0000000053 00000 n `,
-      `0000000108 00000 n `,
-      `0000000238 00000 n `,
-      `0000000535 00000 n `,
-      `trailer<</Size 6/Root 1 0 R>>`,
-      `startxref`,
-      `607`,
-      `%%EOF`,
-    ].join("\n");
+    const dueDate = invoice.dueDate ? new Date(invoice.dueDate).toISOString().slice(0, 10) : "-";
+
+    const doc = new PDFDocument({ margin: 48 });
+    const chunks: Buffer[] = [];
+    await new Promise<void>((resolve, reject) => {
+      doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+      doc.on("end", () => resolve());
+      doc.on("error", reject);
+
+      doc.fontSize(20).text(`Invoice #${invoice.invoiceNumber}`);
+      doc.moveDown(0.5);
+      doc.fontSize(11).text(`Status: ${invoice.status}`);
+      doc.text(`Issue Date: ${issueDate}`);
+      doc.text(`Due Date: ${dueDate}`);
+      doc.text(`Currency: ${invoice.currency}`);
+      doc.text(`Subtotal (minor units): ${invoice.subtotal}`);
+      doc.text(`Tax (minor units): ${invoice.taxAmount}`);
+      doc.text(`Total (minor units): ${invoice.total}`);
+      doc.moveDown();
+      doc.fontSize(13).text("Line Items");
+      doc.moveDown(0.4);
+      for (const item of invoice.items) {
+        doc
+          .fontSize(10)
+          .text(
+            `${item.sortOrder + 1}. ${item.description} | Qty: ${item.quantity} | Unit: ${item.unitPrice}`,
+          );
+      }
+
+      doc.end();
+    });
 
     return {
       fileName: `invoice-${invoice.invoiceNumber}.pdf`,
-      buffer: Buffer.from(pdfText, "utf-8"),
+      buffer: Buffer.concat(chunks),
     };
   }
 }

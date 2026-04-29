@@ -8,9 +8,28 @@ export type EmailJobPayload = {
   html?: string;
 };
 
+export type TransactionImportItem = {
+  customerId?: string | null;
+  categoryId: string;
+  type: "income" | "expense";
+  amount: number;
+  currency: string;
+  description?: string | null;
+  reference?: string | null;
+  importHash?: string | null;
+  transactionDate: Date;
+};
+
+export type TransactionImportJobPayload = {
+  userId: string;
+  items: TransactionImportItem[];
+};
+
 export const EMAIL_QUEUE_NAME = "email-jobs";
+export const TRANSACTION_IMPORT_QUEUE_NAME = "transaction-import-jobs";
 
 let emailQueue: Queue<EmailJobPayload> | null = null;
+let transactionImportQueue: Queue<TransactionImportJobPayload> | null = null;
 
 export function getEmailQueue() {
   if (!emailQueue) {
@@ -25,6 +44,31 @@ export function getEmailQueue() {
 export function enqueueEmailJob(payload: EmailJobPayload) {
   return getEmailQueue().add("send-email", payload, {
     attempts: 3,
+    removeOnComplete: 100,
+    removeOnFail: 200,
+    backoff: {
+      type: "exponential",
+      delay: 1000,
+    },
+  });
+}
+
+export function getTransactionImportQueue() {
+  if (!transactionImportQueue) {
+    transactionImportQueue = new Queue<TransactionImportJobPayload>(
+      TRANSACTION_IMPORT_QUEUE_NAME,
+      {
+        connection: getRedisClient(),
+      },
+    );
+  }
+
+  return transactionImportQueue;
+}
+
+export function enqueueTransactionImportJob(payload: TransactionImportJobPayload) {
+  return getTransactionImportQueue().add(`import-${payload.userId}`, payload, {
+    attempts: 2,
     removeOnComplete: 100,
     removeOnFail: 200,
     backoff: {

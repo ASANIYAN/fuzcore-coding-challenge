@@ -2,6 +2,7 @@ import { and, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
 import { db } from "../../db";
 import { BadRequestError, NotFoundError } from "../../lib/errors";
 import { toMinorUnits } from "../../lib/currency";
+import { enqueueTransactionImportJob } from "../../lib/queue";
 import { categories, customers, transactions } from "../../../shared/schema";
 import type {
   CreateTransactionInput,
@@ -15,6 +16,7 @@ type TransactionRow = typeof transactions.$inferSelect;
 
 type TransactionsServiceDeps = {
   db: Db;
+  enqueueImportJob: typeof enqueueTransactionImportJob;
 };
 
 function serializeTransaction(row: TransactionRow) {
@@ -26,9 +28,11 @@ function serializeTransaction(row: TransactionRow) {
 
 export class TransactionsService {
   private readonly db: Db;
+  private readonly enqueueImportJob: typeof enqueueTransactionImportJob;
 
   constructor(deps?: Partial<TransactionsServiceDeps>) {
     this.db = deps?.db ?? db;
+    this.enqueueImportJob = deps?.enqueueImportJob ?? enqueueTransactionImportJob;
   }
 
   private async ensureCategoryForUser(
@@ -240,6 +244,7 @@ export class TransactionsService {
       const item = input.items[i];
       const imported = await this.createTransaction(userId, {
         ...item,
+        transactionDate: new Date(item.transactionDate),
         importHash: item.importHash ?? `import-${Date.now()}-${i}`,
       });
       created.push(imported);
@@ -248,6 +253,21 @@ export class TransactionsService {
     return {
       importedCount: created.length,
       items: created,
+    };
+  }
+
+  async enqueueImport(userId: string, input: ImportTransactionsInput) {
+    const job = await this.enqueueImportJob({
+      userId,
+      items: input.items.map((item) => ({
+        ...item,
+        transactionDate: item.transactionDate,
+      })),
+    });
+
+    return {
+      jobId: job.id,
+      message: "Transaction import queued.",
     };
   }
 }

@@ -15,6 +15,14 @@ customersRouter.use(requireAuth, rateLimit("standard-user-minute"));
 
 customersRouter.get("/", customersController.listCustomers);
 customersRouter.get("/:id", customersController.getCustomer);
-customersRouter.post("/", validate(createCustomerSchema), customersController.createCustomer);
-customersRouter.patch("/:id", validate(updateCustomerSchema), customersController.updateCustomer);
+customersRouter.post(
+  "/",
+  validate(createCustomerSchema),
+  customersController.createCustomer,
+);
+customersRouter.patch(
+  "/:id",
+  validate(updateCustomerSchema),
+  customersController.updateCustomer,
+);
 customersRouter.delete("/:id", customersController.deleteCustomer);

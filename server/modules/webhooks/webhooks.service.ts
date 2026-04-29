@@ -52,17 +52,19 @@ export class WebhooksService {
         stripeClient.webhooks.constructEvent(payload, signature, secret));
   }
 
-  async handleStripeWebhook(payload: Buffer, signature: string | undefined) {
+  verifyStripeWebhook(payload: Buffer, signature: string | undefined) {
     if (!signature) {
       throw new BadRequestError("Missing Stripe signature");
     }
 
-    let event: Stripe.Event;
     try {
-      event = this.constructEvent(payload, signature, env.STRIPE_WEBHOOK_SECRET);
+      return this.constructEvent(payload, signature, env.STRIPE_WEBHOOK_SECRET);
     } catch {
       throw new BadRequestError("Invalid Stripe signature");
     }
+  }
+
+  async processStripeEvent(event: Stripe.Event) {
 
     const [processedEvent] = await this.db
       .select({ id: processedWebhookEvents.id })
@@ -139,5 +141,10 @@ export class WebhooksService {
     }
 
     return { received: true };
+  }
+
+  async handleStripeWebhook(payload: Buffer, signature: string | undefined) {
+    const event = this.verifyStripeWebhook(payload, signature);
+    return this.processStripeEvent(event);
   }
 }

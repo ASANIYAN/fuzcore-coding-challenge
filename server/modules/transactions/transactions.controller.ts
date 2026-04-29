@@ -111,4 +111,20 @@ export class TransactionsController {
     );
     return res.status(201).json(success(result));
   };
+
+  queueImportTransactions = async (
+    req: Request<unknown, unknown, ImportTransactionsInput>,
+    res: Response,
+  ) => {
+    const bodyResult = importTransactionsSchema.safeParse(req.body);
+    if (!bodyResult.success) {
+      throw new ValidationError(bodyResult.error.issues);
+    }
+
+    const result = await this.transactionsService.enqueueImport(
+      req.user!.id,
+      bodyResult.data,
+    );
+    return res.status(202).json(success(result));
+  };
 }
