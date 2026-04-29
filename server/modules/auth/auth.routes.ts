@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth } from "../../middleware/auth.middleware";
+import { optionalAuth, requireAuth } from "../../middleware/auth.middleware";
 import { validate } from "../../middleware/validate.middleware";
 import { rateLimit } from "../../middleware/rate-limit.middleware";
 import { AuthController } from "./auth.controller";
@@ -16,6 +16,8 @@ const authService = new AuthService();
 const authController = new AuthController(authService);
 
 export const authRouter = Router();
+
+authRouter.get("/session", optionalAuth, authController.session);
 
 authRouter.post(
   "/signup",

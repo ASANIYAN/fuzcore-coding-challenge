@@ -6,14 +6,14 @@ import { toast } from "sonner";
 import { applyApiFormErrors } from "@/lib/apply-api-form-errors";
 import { SESSION_STATUS_QUERY_KEY } from "@/modules/auth/hooks/use-session-status";
 import { unauthApi } from "@/services/api-service";
-import { loginSchema, type LoginFormValues } from "@/modules/auth/utils/validations";
+import { signupSchema, type SignupFormValues } from "@/modules/auth/utils/validations";
 
-export function useLoginForm() {
+export function useSignupForm() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+  const form = useForm<SignupFormValues>({
+    resolver: zodResolver(signupSchema),
     mode: "onChange",
     defaultValues: {
       email: "",
@@ -21,15 +21,15 @@ export function useLoginForm() {
     },
   });
 
-  const onSubmit = async (values: LoginFormValues) => {
+  const onSubmit = async (values: SignupFormValues) => {
     try {
-      await unauthApi.post("/auth/login", values);
+      await unauthApi.post("/auth/signup", values);
       await queryClient.invalidateQueries({ queryKey: SESSION_STATUS_QUERY_KEY });
-      toast.success("Login successful");
-      void navigate("/dashboard");
+      toast.success("Account created. Please verify your email.");
+      void navigate(`/verify-email?email=${encodeURIComponent(values.email)}`);
     } catch (error) {
-      applyApiFormErrors(form, error, "Unable to login");
-      toast.error("Unable to login. Please check your details and try again.");
+      applyApiFormErrors(form, error, "Unable to create account");
+      toast.error("Unable to create account. Please review your details.");
     }
   };
 

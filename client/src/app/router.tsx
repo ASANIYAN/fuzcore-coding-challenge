@@ -16,6 +16,8 @@ import TransactionsImportView from "@/modules/transactions/views/transactions-im
 import InvoicesListView from "@/modules/invoices/views/invoices-list";
 import InvoiceCreateView from "@/modules/invoices/views/invoice-create";
 import InvoiceDetailsView from "@/modules/invoices/views/invoice-details";
+import RequireAuthRoute from "@/modules/auth/components/require-auth-route";
+import GuestOnlyRoute from "@/modules/auth/components/guest-only-route";
 
 const dashboardRoutes: RouteObject[] = [
   {
@@ -58,8 +60,14 @@ export const routes: RouteObject[] = [
       </section>
     ),
     children: [
-      ...unprotectedRoutes,
-      ...dashboardRoutes,
+      {
+        element: <GuestOnlyRoute />,
+        children: unprotectedRoutes,
+      },
+      {
+        element: <RequireAuthRoute />,
+        children: dashboardRoutes,
+      },
       {
         path: "*",
         element: (

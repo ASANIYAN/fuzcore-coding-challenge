@@ -59,6 +59,13 @@ export class AuthController {
     return this.ok(res, data);
   };
 
+  session = async (req: Request, res: Response) => {
+    return this.ok(res, {
+      authenticated: Boolean(req.user),
+      user: req.user ?? null,
+    });
+  };
+
   forgotPassword = async (
     req: Request<unknown, unknown, ForgotPasswordInput>,
     res: Response,

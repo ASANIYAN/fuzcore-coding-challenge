@@ -9,6 +9,9 @@ export default function LoginView() {
         <p className="mt-1 text-xiii text-app-text-muted">Sign in to continue.</p>
       </div>
       <LoginForm />
+      <Link to="/forgot-password" className="text-xiii text-app-primary hover:underline">
+        Forgot your password?
+      </Link>
       <p className="text-xiii text-app-text-muted">
         Don&apos;t have an account? <Link to="/signup" className="text-app-primary hover:underline">Create one</Link>
       </p>

@@ -24,48 +24,66 @@ export const requireAuth = (
   _res: Response,
   next: NextFunction,
 ) => {
+  void attachSessionFromRequest(req)
+    .then((authenticated) => {
+      if (!authenticated) {
+        throw new UnauthorizedError();
+      }
+      next();
+    })
+    .catch(next);
+};
+
+export const optionalAuth = (
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+) => {
+  void attachSessionFromRequest(req)
+    .then(() => next())
+    .catch(next);
+};
+
+async function attachSessionFromRequest(req: Request) {
   const cookieHeader = req.headers.cookie;
   if (typeof cookieHeader !== "string") {
-    throw new UnauthorizedError();
+    return false;
   }
 
   const sessionId = getCookieValue(cookieHeader, SESSION_COOKIE_NAME);
   if (!sessionId) {
-    throw new UnauthorizedError();
+    return false;
+  }
+  const now = new Date();
+  const rows = await db
+    .select({
+      sessionId: sessions.id,
+      userId: users.id,
+      email: users.email,
+      emailVerifiedAt: users.emailVerifiedAt,
+    })
+    .from(sessions)
+    .innerJoin(users, eq(users.id, sessions.userId))
+    .where(
+      and(
+        eq(sessions.id, sessionId),
+        isNull(sessions.revokedAt),
+        gt(sessions.expiresAt, now),
+      ),
+    )
+    .limit(1);
+
+  const session = rows[0];
+  if (!session) {
+    return false;
   }
 
-  void (async () => {
-    const now = new Date();
-    const rows = await db
-      .select({
-        sessionId: sessions.id,
-        userId: users.id,
-        email: users.email,
-        emailVerifiedAt: users.emailVerifiedAt,
-      })
-      .from(sessions)
-      .innerJoin(users, eq(users.id, sessions.userId))
-      .where(
-        and(
-          eq(sessions.id, sessionId),
-          isNull(sessions.revokedAt),
-          gt(sessions.expiresAt, now),
-        ),
-      )
-      .limit(1);
+  req.sessionId = session.sessionId;
+  req.user = {
+    id: session.userId,
+    email: session.email,
+    emailVerifiedAt: session.emailVerifiedAt,
+  };
 
-    const session = rows[0];
-    if (!session) {
-      throw new UnauthorizedError();
-    }
-
-    req.sessionId = session.sessionId;
-    req.user = {
-      id: session.userId,
-      email: session.email,
-      emailVerifiedAt: session.emailVerifiedAt,
-    };
-
-    next();
-  })().catch(next);
-};
+  return true;
+}
