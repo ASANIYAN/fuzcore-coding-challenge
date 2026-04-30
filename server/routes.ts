@@ -1,36 +1,27 @@
 import type { Express } from "express";
-import type { Server } from "http";
-import { db } from "./db";
-import { counter } from "../shared/schema";
-import { eq } from "drizzle-orm";
+import swaggerUi from "swagger-ui-express";
+import { openApiDocument } from "./lib/openapi";
+import { authRouter } from "./modules/auth/auth.routes";
+import { categoriesRouter } from "./modules/categories/categories.routes";
+import { customersRouter } from "./modules/customers/customers.routes";
+import { currenciesRouter } from "./modules/currencies/currencies.routes";
+import { dashboardRouter } from "./modules/dashboard/dashboard.routes";
+import { invoicesRouter } from "./modules/invoices/invoices.routes";
+import { transactionsRouter } from "./modules/transactions/transactions.routes";
+import { webhooksRouter } from "./modules/webhooks/webhooks.routes";
 
-export async function registerRoutes(httpServer: Server, app: Express) {
-  app.get("/api/counter", async (_req, res) => {
-    const rows = await db.select().from(counter).where(eq(counter.id, 1));
-    if (rows.length === 0) {
-      const inserted = await db
-        .insert(counter)
-        .values({ id: 1, count: 0 })
-        .returning();
-      return res.json({ count: inserted[0].count });
-    }
-    return res.json({ count: rows[0].count });
+export async function registerRoutes(app: Express) {
+  app.get("/docs/openapi.json", (_req, res) => {
+    return res.status(200).json(openApiDocument);
   });
+  app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
-  app.post("/api/counter/increment", async (_req, res) => {
-    const rows = await db.select().from(counter).where(eq(counter.id, 1));
-    if (rows.length === 0) {
-      const inserted = await db
-        .insert(counter)
-        .values({ id: 1, count: 1 })
-        .returning();
-      return res.json({ count: inserted[0].count });
-    }
-    const updated = await db
-      .update(counter)
-      .set({ count: rows[0].count + 1 })
-      .where(eq(counter.id, 1))
-      .returning();
-    return res.json({ count: updated[0].count });
-  });
+  app.use("/api/auth", authRouter);
+  app.use("/api/categories", categoriesRouter);
+  app.use("/api/currencies", currenciesRouter);
+  app.use("/api/customers", customersRouter);
+  app.use("/api/dashboard", dashboardRouter);
+  app.use("/api/invoices", invoicesRouter);
+  app.use("/api/transactions", transactionsRouter);
+  app.use("/api/webhooks", webhooksRouter);
 }

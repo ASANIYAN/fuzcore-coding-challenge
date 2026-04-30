@@ -1,43 +1,12 @@
-import { QueryClient, QueryClientProvider, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-
-const queryClient = new QueryClient();
-
-function CounterPage() {
-  const qc = useQueryClient();
-
-  const { data, isLoading } = useQuery<{ count: number }>({
-    queryKey: ["/api/counter"],
-    queryFn: () => fetch("/api/counter").then((r) => r.json()),
-  });
-
-  const increment = useMutation({
-    mutationFn: () =>
-      fetch("/api/counter/increment", { method: "POST" }).then((r) => r.json()),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/counter"] }),
-  });
-
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-6">
-      <h1 className="text-4xl font-bold">Counter</h1>
-      <p className="text-6xl font-mono">
-        {isLoading ? "…" : data?.count ?? 0}
-      </p>
-      <Button
-        onClick={() => increment.mutate()}
-        disabled={increment.isPending}
-        size="lg"
-      >
-        Increment
-      </Button>
-    </div>
-  );
-}
+import { Outlet } from "react-router-dom";
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <CounterPage />
-    </QueryClientProvider>
+    <div className="relative">
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-0 h-64 bg-gradient-to-b from-app-primary-dim/80 to-transparent" />
+      <div className="relative z-10 animate-in fade-in duration-300">
+        <Outlet />
+      </div>
+    </div>
   );
 }

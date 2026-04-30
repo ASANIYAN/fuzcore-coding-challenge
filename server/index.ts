@@ -1,62 +1,100 @@
-import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
 import { createServer } from "http";
+import { createApp } from "./app";
+import { env } from "./lib/env";
+import { logger } from "./lib/logger";
+import { getRedisClient } from "./lib/redis";
+import { startEmailWorker } from "./workers/email.worker";
+import { startTransactionImportWorker } from "./workers/transaction-import.worker";
 
-const app = express();
-const httpServer = createServer(app);
+let httpServer = createServer();
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+const RETRYABLE_LISTEN_ERRORS = new Set([
+  "ENOTSUP",
+  "EOPNOTSUPP",
+  "EADDRNOTAVAIL",
+  "EAFNOSUPPORT",
+  "EPERM",
+]);
 
-export function log(message: string, source = "express") {
-  const formattedTime = new Date().toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-  console.log(`${formattedTime} [${source}] ${message}`);
+function getListenHosts() {
+  const configuredHost = env.HOST?.trim();
+  if (!configuredHost) {
+    return ["127.0.0.1", "0.0.0.0"];
+  }
+
+  return Array.from(new Set([configuredHost, "127.0.0.1", "0.0.0.0"]));
 }
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+async function listenOnHost(port: number, host: string) {
+  await new Promise<void>((resolve, reject) => {
+    const onError = (error: NodeJS.ErrnoException) => {
+      cleanup();
+      reject(error);
+    };
+    const onListening = () => {
+      cleanup();
+      resolve();
+    };
+    const cleanup = () => {
+      httpServer.off("error", onError);
+      httpServer.off("listening", onListening);
+    };
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-      log(logLine);
-    }
+    httpServer.once("error", onError);
+    httpServer.once("listening", onListening);
+    httpServer.listen({ port, host });
   });
+}
 
-  next();
-});
+async function startServer(port: number) {
+  const hosts = getListenHosts();
+  let lastError: NodeJS.ErrnoException | undefined;
+
+  for (let i = 0; i < hosts.length; i += 1) {
+    const host = hosts[i];
+    try {
+      await listenOnHost(port, host);
+      const bindUrl = `http://${host}:${port}`;
+      const localUrl = host === "0.0.0.0" ? `http://localhost:${port}` : bindUrl;
+      logger.info({ host, port, url: localUrl, bindUrl }, "server started");
+      return;
+    } catch (error) {
+      const listenError = error as NodeJS.ErrnoException;
+      lastError = listenError;
+      const isRetryable = Boolean(
+        listenError.code && RETRYABLE_LISTEN_ERRORS.has(listenError.code),
+      );
+      const hasNextHost = i < hosts.length - 1;
+
+      if (!isRetryable || !hasNextHost) {
+        throw listenError;
+      }
+
+      logger.warn(
+        { host, port, code: listenError.code },
+        "failed to bind host, trying next fallback",
+      );
+    }
+  }
+
+  throw (
+    lastError ??
+    new Error(`unable to bind server on port ${port} for hosts ${hosts.join(", ")}`)
+  );
+}
 
 (async () => {
-  await registerRoutes(httpServer, app);
+  const redis = getRedisClient();
+  await redis.ping();
+  logger.info("redis connected");
 
-  app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    console.error("Internal Server Error:", err);
-    if (res.headersSent) {
-      return next(err);
-    }
-    return res.status(status).json({ message });
-  });
+  startEmailWorker();
+  startTransactionImportWorker();
 
-  if (process.env.NODE_ENV === "production") {
+  const app = await createApp();
+  httpServer = createServer(app);
+
+  if (env.NODE_ENV === "production") {
     const { serveStatic } = await import("./static");
     serveStatic(app);
   } else {
@@ -64,15 +102,8 @@ app.use((req, res, next) => {
     await setupVite(httpServer, app);
   }
 
-  const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    },
-  );
-})();
+  await startServer(env.PORT);
+})().catch((err: unknown) => {
+  logger.error({ err }, "fatal startup error");
+  process.exit(1);
+});

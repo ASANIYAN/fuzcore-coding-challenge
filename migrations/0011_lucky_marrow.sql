@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS "transactions_user_reference_unique" ON "transactions" USING btree ("user_id","reference") WHERE "transactions"."reference" is not null and "transactions"."archived_at" is null;

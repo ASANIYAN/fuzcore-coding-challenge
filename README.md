@@ -20,16 +20,17 @@ See [TASK.md](./TASK.md) for the full challenge brief and candidate instructions
 npm run docker:dev
 ```
 
-This starts the full stack (app + PostgreSQL) via Docker Compose. The app will be available at [http://localhost:5000](http://localhost:5000). Hot reload is enabled — changes to source files are reflected immediately.
+This starts the full stack (app + PostgreSQL) via Docker Compose. The app will be available at [http://localhost:5001](http://localhost:5001). Hot reload is enabled — changes to source files are reflected immediately.
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run docker:dev` | Start the full stack with Docker Compose |
-| `npm run db:push` | Push schema changes to the database |
-| `npm run build` | Build for production |
-| `npm run check` | TypeScript type check |
+| Command                  | Description                                             |
+| ------------------------ | ------------------------------------------------------- |
+| `npm run docker:dev`     | Start the full stack with Docker Compose                |
+| `npm run db:push`        | Push schema changes to the database                     |
+| `npm run build`          | Build for production                                    |
+| `npm run check`          | TypeScript type check                                   |
+| `npm run security:check` | Scan for risky patterns and dependency-source anomalies |
 
 ## Project Structure
 
@@ -50,3 +51,6 @@ shared/        # Shared types and schema
 ## Environment Variables
 
 See `.env.example` for reference. When using `npm run docker:dev` these are set automatically via `docker-compose.yml`.
+
+- `HOST`: defaults to `127.0.0.1` for local runs; Docker sets `0.0.0.0` so the app is reachable from the host machine.
+- `VITE_ALLOWED_HOSTS`: comma-separated host allowlist for the Vite dev server. Defaults to `localhost,127.0.0.1`; add your exact ngrok or LAN hostname when needed.
