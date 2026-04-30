@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import CustomDatePicker from "@/components/custom/custom-date-picker";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatNumber } from "@/lib/utils";
 import { useDashboardView } from "@/modules/dashboard/hooks/use-dashboard-view";
 
 export default function DashboardView() {
@@ -65,7 +66,11 @@ export default function DashboardView() {
                     key={row.currency}
                     className="text-xiv font-medium text-app-text"
                   >
-                    {row.currency} {row.amount.toFixed(2)}
+                    {row.currency}{" "}
+                    {formatNumber(row.amount, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                   </p>
                 ))
               ) : (
@@ -80,7 +85,11 @@ export default function DashboardView() {
                     key={row.currency}
                     className="text-xiv font-medium text-app-text"
                   >
-                    {row.currency} {row.amount.toFixed(2)}
+                    {row.currency}{" "}
+                    {formatNumber(row.amount, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                   </p>
                 ))
               ) : (
@@ -95,7 +104,11 @@ export default function DashboardView() {
                     key={row.currency}
                     className="text-xiv font-medium text-app-text"
                   >
-                    {row.currency} {row.amount.toFixed(2)}
+                    {row.currency}{" "}
+                    {formatNumber(row.amount, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                   </p>
                 ))
               ) : (
@@ -112,7 +125,15 @@ export default function DashboardView() {
               {dashboard.outstanding.length ? (
                 dashboard.outstanding.map((row) => (
                   <p key={row.currency} className="text-xiii text-app-text">
-                    {row.currency} {row.amount.toFixed(2)} ({row.invoiceCount}{" "}
+                    {row.currency}{" "}
+                    {formatNumber(row.amount, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    (
+                    {formatNumber(row.invoiceCount, {
+                      maximumFractionDigits: 0,
+                    })}{" "}
                     invoices)
                   </p>
                 ))
@@ -129,7 +150,15 @@ export default function DashboardView() {
               {dashboard.overdue.length ? (
                 dashboard.overdue.map((row) => (
                   <p key={row.currency} className="text-xiii text-app-text">
-                    {row.currency} {row.amount.toFixed(2)} ({row.invoiceCount}{" "}
+                    {row.currency}{" "}
+                    {formatNumber(row.amount, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    (
+                    {formatNumber(row.invoiceCount, {
+                      maximumFractionDigits: 0,
+                    })}{" "}
                     invoices)
                   </p>
                 ))
@@ -159,7 +188,11 @@ export default function DashboardView() {
                   {dashboard.recentTransactions.map((row) => (
                     <li key={row.id} className="text-xiii text-app-text">
                       {new Date(row.transactionDate).toLocaleDateString()} -{" "}
-                      {row.type} - {row.currency} {row.amount.toFixed(2)}
+                      {row.type} - {row.currency}{" "}
+                      {formatNumber(row.amount, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </li>
                   ))}
                 </ul>
