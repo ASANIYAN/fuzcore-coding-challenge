@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { CustomButton } from "@/components/custom/custom-button";
+import { Input } from "@/components/ui/input";
 import { getApiErrorMessage } from "@/lib/get-api-error-message";
 import {
   useDownloadTransactionImportSample,
@@ -110,12 +111,12 @@ export default function TransactionsImportView() {
             <label htmlFor="transactions-csv" className="text-xiii font-medium text-app-text">
               Select CSV file
             </label>
-            <input
+            <Input
               id="transactions-csv"
               type="file"
               accept=".csv,text/csv"
               onChange={handleFileChange}
-              className="block w-full rounded-[--radius-md] border border-app-border bg-app-card px-3 py-2 text-xiii text-app-text"
+              className="h-auto rounded-[--radius-md] border-app-border bg-app-card px-3 py-2 text-xiii text-app-text"
             />
             <p className="text-xii text-app-text-muted">Max file size: 2MB</p>
             {selectedFile ? (

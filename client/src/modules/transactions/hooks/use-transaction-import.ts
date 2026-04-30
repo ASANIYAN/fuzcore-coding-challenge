@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { authApi } from "@/services/api-service";
+import { authApi, formAuthApi } from "@/services/api-service";
 
 export type ImportJobError = {
   row: number;
@@ -41,14 +41,9 @@ export function useQueueTransactionImport() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await authApi.post<QueueImportResponse>(
+      const response = await formAuthApi.post<QueueImportResponse>(
         "/transactions/import",
         formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        },
       );
 
       return response.data.data;

@@ -1,40 +1,20 @@
-import axios from "axios";
 import type { FieldValues, Path, UseFormReturn } from "react-hook-form";
-
-type ApiErrorDetail = {
-  path?: string[];
-  message?: string;
-};
-
-type ApiErrorPayload = {
-  error?: {
-    message?: string;
-    details?: ApiErrorDetail[];
-  };
-};
+import { getApiErrorMessage, getApiFieldErrors } from "@/lib/get-api-error-message";
 
 export function applyApiFormErrors<TFieldValues extends FieldValues>(
   form: UseFormReturn<TFieldValues>,
   error: unknown,
   fallbackMessage = "Something went wrong",
 ) {
-  if (!axios.isAxiosError<ApiErrorPayload>(error)) {
-    form.setError("root", { message: fallbackMessage });
-    return;
+  const fieldErrors = getApiFieldErrors(error);
+  const entries = Object.entries(fieldErrors);
+  for (const [fieldName, message] of entries) {
+    if (!fieldName) continue;
+    form.setError(fieldName as Path<TFieldValues>, {
+      message: message || "Invalid value",
+    });
   }
 
-  const details = error.response?.data?.error?.details;
-  if (details?.length) {
-    for (const detail of details) {
-      const fieldName = detail.path?.[0];
-      if (fieldName) {
-        form.setError(fieldName as Path<TFieldValues>, {
-          message: detail.message ?? "Invalid value",
-        });
-      }
-    }
-  }
-
-  const rootMessage = error.response?.data?.error?.message ?? fallbackMessage;
+  const rootMessage = getApiErrorMessage(error, fallbackMessage);
   form.setError("root", { message: rootMessage });
 }
