@@ -1,31 +1,9 @@
-import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import CustomInput from "@/components/custom/custom-input";
-import { useDashboard } from "@/modules/dashboard/hooks/use-dashboard";
-
-function toIsoStartOfDay(dateString: string) {
-  return new Date(`${dateString}T00:00:00`).toISOString();
-}
-
-function toIsoEndOfDay(dateString: string) {
-  return new Date(`${dateString}T23:59:59.999`).toISOString();
-}
+import { useDashboardView } from "@/modules/dashboard/hooks/use-dashboard-view";
 
 export default function DashboardView() {
-  const filterForm = useForm({
-    defaultValues: {
-      from: "",
-      to: "",
-    },
-  });
-
-  const from = filterForm.watch("from");
-  const to = filterForm.watch("to");
-
-  const dashboardFrom = from ? toIsoStartOfDay(from) : undefined;
-  const dashboardTo = to ? toIsoEndOfDay(to) : undefined;
-
-  const { dashboard, isLoading, isFetching } = useDashboard(dashboardFrom, dashboardTo);
+  const { filterForm, dashboard, isLoading } = useDashboardView();
 
   return (
     <section className="space-y-6">

@@ -1,130 +1,44 @@
-import { useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
-import { toast } from "sonner";
 import { CustomButton } from "@/components/custom/custom-button";
 import ConfirmActionDialog from "@/components/custom/confirm-action-dialog";
 import CustomInput from "@/components/custom/custom-input";
 import CustomSelect from "@/components/custom/custom-select";
-import { useCategories } from "@/modules/categories/hooks/use-categories";
-import type { Category } from "@/modules/categories/types";
-import { useCustomers } from "@/modules/customers/hooks/use-customers";
-import { useCurrencies } from "@/modules/currencies/hooks/use-currencies";
 import TransactionForm from "@/modules/transactions/components/transaction-form";
 import TransactionsTable from "@/modules/transactions/components/transactions-table";
-import {
-  useCreateTransaction,
-  useDeleteTransaction,
-  useUpdateTransaction,
-} from "@/modules/transactions/hooks/use-transaction-mutations";
-import { useTransactions } from "@/modules/transactions/hooks/use-transactions";
-import type { Transaction } from "@/modules/transactions/types";
+import { useTransactionsListView } from "@/modules/transactions/hooks/use-transactions-list-view";
 import {
   transactionTypeOptions,
-  type CreateTransactionPayload,
-  type ListTransactionsQuery,
 } from "@/modules/transactions/utils/validations";
-import { getApiErrorMessage } from "@/lib/get-api-error-message";
-
-function toIsoStartOfDay(dateString: string) {
-  return new Date(`${dateString}T00:00:00`).toISOString();
-}
-
-function toIsoEndOfDay(dateString: string) {
-  return new Date(`${dateString}T23:59:59.999`).toISOString();
-}
-
-const customerOptionsQuery = {
-  page: 1,
-  limit: 100,
-  search: undefined,
-  type: undefined,
-} as const;
 
 export default function TransactionsListView() {
-  const [page, setPage] = useState(1);
-  const [limit] = useState(20);
-  const [typeFilter, setTypeFilter] = useState<"income" | "expense" | undefined>(undefined);
-  const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
-  const [customerFilter, setCustomerFilter] = useState<string | undefined>(undefined);
-  const [startDateFilter, setStartDateFilter] = useState<string | undefined>(undefined);
-  const [endDateFilter, setEndDateFilter] = useState<string | undefined>(undefined);
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
-  const [pendingDeleteTransactionId, setPendingDeleteTransactionId] = useState<string | null>(null);
-
-  const query: ListTransactionsQuery = useMemo(
-    () => ({
-      page,
-      limit,
-      type: typeFilter,
-      categoryId: categoryFilter,
-      customerId: customerFilter,
-      startDate: startDateFilter,
-      endDate: endDateFilter,
-    }),
-    [page, limit, typeFilter, categoryFilter, customerFilter, startDateFilter, endDateFilter],
-  );
-
-  const { categories } = useCategories({});
-  const { customers } = useCustomers(customerOptionsQuery);
-  const { currencies } = useCurrencies();
-
-  const { transactions, meta, isLoading, isFetching } = useTransactions(query);
-  const { createTransaction, isPending: isCreating } = useCreateTransaction(query);
-  const { updateTransaction, isPending: isUpdating } = useUpdateTransaction(query);
-  const { deleteTransaction } = useDeleteTransaction(query);
-
-  const filterForm = useForm({
-    defaultValues: {
-      type: "all",
-      categoryId: "all",
-      customerId: "all",
-      startDate: "",
-      endDate: "",
-    },
-  });
-
-  const handleCreate = async (payload: CreateTransactionPayload) => {
-    await createTransaction(payload);
-    toast.success("Transaction created successfully.");
-  };
-
-  const handleUpdate = async (payload: CreateTransactionPayload) => {
-    if (!editingTransaction) {
-      return;
-    }
-
-    await updateTransaction({
-      transactionId: editingTransaction.id,
-      payload,
-    });
-    toast.success("Transaction updated successfully.");
-    setEditingTransaction(null);
-  };
-
-  const handleDelete = async (transactionId: string) => {
-    try {
-      setDeletingTransactionId(transactionId);
-      await deleteTransaction(transactionId);
-      toast.success("Transaction deleted successfully.");
-      setPendingDeleteTransactionId(null);
-      if (editingTransaction?.id === transactionId) {
-        setEditingTransaction(null);
-      }
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, "Unable to delete transaction"));
-    } finally {
-      setDeletingTransactionId(null);
-    }
-  };
-
-  const categoriesForType = typeFilter
-    ? categories.filter((category) => category.type === typeFilter)
-    : categories;
-
-  const hasPrevious = meta.page > 1;
-  const hasNext = meta.page < meta.totalPages;
+  const {
+    filterForm,
+    categories,
+    categoriesForType,
+    customers,
+    currencies,
+    transactions,
+    meta,
+    editingTransaction,
+    deletingTransactionId,
+    pendingDeleteTransactionId,
+    isLoading,
+    isFetching,
+    isCreating,
+    isUpdating,
+    hasPrevious,
+    hasNext,
+    applyFilters,
+    create,
+    update,
+    startEdit,
+    cancelEdit,
+    openDeleteDialog,
+    closeDeleteDialog,
+    confirmDelete,
+    goPrevious,
+    goNext,
+  } = useTransactionsListView();
 
   return (
     <section className="space-y-6">
@@ -143,7 +57,7 @@ export default function TransactionsListView() {
           customers={customers}
           currencies={currencies}
           isSubmitting={isCreating}
-          onSubmit={handleCreate}
+          onSubmit={create}
         />
       </div>
 
@@ -151,7 +65,7 @@ export default function TransactionsListView() {
         <div className="rounded-[--radius-lg] border border-app-border bg-app-card p-5">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xvi font-semibold text-app-text">Edit transaction</h2>
-            <CustomButton type="button" size="sm" variant="secondary" onClick={() => setEditingTransaction(null)}>
+            <CustomButton type="button" size="sm" variant="secondary" onClick={cancelEdit}>
               Cancel
             </CustomButton>
           </div>
@@ -162,7 +76,7 @@ export default function TransactionsListView() {
             customers={customers}
             currencies={currencies}
             isSubmitting={isUpdating}
-            onSubmit={handleUpdate}
+            onSubmit={update}
           />
         </div>
       ) : null}
@@ -175,16 +89,7 @@ export default function TransactionsListView() {
           </Link>
         </div>
         <form
-          onSubmit={filterForm.handleSubmit((values) => {
-            setPage(1);
-            setTypeFilter(
-              values.type === "all" ? undefined : (values.type as "income" | "expense"),
-            );
-            setCategoryFilter(values.categoryId === "all" ? undefined : values.categoryId);
-            setCustomerFilter(values.customerId === "all" ? undefined : values.customerId);
-            setStartDateFilter(values.startDate ? toIsoStartOfDay(values.startDate) : undefined);
-            setEndDateFilter(values.endDate ? toIsoEndOfDay(values.endDate) : undefined);
-          })}
+          onSubmit={applyFilters}
           className="grid gap-4 md:grid-cols-3"
         >
           <CustomSelect
@@ -200,7 +105,7 @@ export default function TransactionsListView() {
             label="Category"
             options={[
               { value: "all", label: "All categories" },
-              ...categoriesForType.map((category: Category) => ({
+              ...categoriesForType.map((category) => ({
                 value: category.id,
                 label: `${category.name} (${category.type})`,
               })),
@@ -238,8 +143,8 @@ export default function TransactionsListView() {
           currencies={currencies}
           editingTransactionId={isUpdating && editingTransaction ? editingTransaction.id : null}
           deletingTransactionId={deletingTransactionId}
-          onEdit={(transaction) => setEditingTransaction(transaction)}
-          onDelete={setPendingDeleteTransactionId}
+          onEdit={startEdit}
+          onDelete={openDeleteDialog}
         />
       )}
 
@@ -253,7 +158,7 @@ export default function TransactionsListView() {
             variant="secondary"
             size="sm"
             disabled={!hasPrevious}
-            onClick={() => setPage((current) => Math.max(1, current - 1))}
+            onClick={goPrevious}
           >
             Previous
           </CustomButton>
@@ -262,7 +167,7 @@ export default function TransactionsListView() {
             variant="secondary"
             size="sm"
             disabled={!hasNext}
-            onClick={() => setPage((current) => current + 1)}
+            onClick={goNext}
           >
             Next
           </CustomButton>
@@ -277,15 +182,10 @@ export default function TransactionsListView() {
         loading={!!pendingDeleteTransactionId && deletingTransactionId === pendingDeleteTransactionId}
         onOpenChange={(open) => {
           if (!open) {
-            setPendingDeleteTransactionId(null);
+            closeDeleteDialog();
           }
         }}
-        onConfirm={() => {
-          if (!pendingDeleteTransactionId) {
-            return;
-          }
-          void handleDelete(pendingDeleteTransactionId);
-        }}
+        onConfirm={() => void confirmDelete()}
       />
     </section>
   );

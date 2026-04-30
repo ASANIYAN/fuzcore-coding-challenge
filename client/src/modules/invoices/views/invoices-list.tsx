@@ -1,53 +1,25 @@
-import { useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import CustomInput from "@/components/custom/custom-input";
 import CustomSelect from "@/components/custom/custom-select";
 import { CustomButton } from "@/components/custom/custom-button";
 import InvoicesTable from "@/modules/invoices/components/invoices-table";
-import { useInvoices } from "@/modules/invoices/hooks/use-invoices";
+import { useInvoicesListView } from "@/modules/invoices/hooks/use-invoices-list-view";
 import { invoiceStatusOptions, type ListInvoicesQuery } from "@/modules/invoices/utils/validations";
-import { useCustomers } from "@/modules/customers/hooks/use-customers";
-
-function toIsoStartOfDay(dateString: string) {
-  return new Date(`${dateString}T00:00:00`).toISOString();
-}
-
-function toIsoEndOfDay(dateString: string) {
-  return new Date(`${dateString}T23:59:59.999`).toISOString();
-}
-
-const customerOptionsQuery = {
-  page: 1,
-  limit: 100,
-  search: undefined,
-  type: undefined,
-} as const;
 
 export default function InvoicesListView() {
-  const [page, setPage] = useState(1);
-  const [limit] = useState(20);
-  const [status, setStatus] = useState<ListInvoicesQuery["status"]>(undefined);
-  const [customerId, setCustomerId] = useState<string | undefined>(undefined);
-  const [from, setFrom] = useState<string | undefined>(undefined);
-  const [to, setTo] = useState<string | undefined>(undefined);
-
-  const query = useMemo(
-    () => ({ page, limit, status, customerId, from, to }),
-    [page, limit, status, customerId, from, to],
-  );
-
-  const { invoices, meta, isLoading, isFetching } = useInvoices(query);
-  const { customers } = useCustomers(customerOptionsQuery);
-
-  const filterForm = useForm({
-    defaultValues: {
-      status: "all",
-      customerId: "all",
-      from: "",
-      to: "",
-    },
-  });
+  const {
+    filterForm,
+    invoices,
+    meta,
+    customers,
+    isLoading,
+    isFetching,
+    hasPrevious,
+    hasNext,
+    applyFilters,
+    goPrevious,
+    goNext,
+  } = useInvoicesListView();
 
   return (
     <section className="space-y-6">
@@ -64,13 +36,7 @@ export default function InvoicesListView() {
       <div className="rounded-[--radius-lg] border border-app-border bg-app-card p-5">
         <h2 className="mb-4 text-xvi font-semibold text-app-text">Filter invoices</h2>
         <form
-          onSubmit={filterForm.handleSubmit((values) => {
-            setPage(1);
-            setStatus(values.status === "all" ? undefined : (values.status as ListInvoicesQuery["status"]));
-            setCustomerId(values.customerId === "all" ? undefined : values.customerId);
-            setFrom(values.from ? toIsoStartOfDay(values.from) : undefined);
-            setTo(values.to ? toIsoEndOfDay(values.to) : undefined);
-          })}
+          onSubmit={applyFilters}
           className="grid gap-4 md:grid-cols-3"
         >
           <CustomSelect
@@ -116,8 +82,8 @@ export default function InvoicesListView() {
             type="button"
             variant="secondary"
             size="sm"
-            disabled={meta.page <= 1}
-            onClick={() => setPage((current) => Math.max(1, current - 1))}
+            disabled={!hasPrevious}
+            onClick={goPrevious}
           >
             Previous
           </CustomButton>
@@ -125,8 +91,8 @@ export default function InvoicesListView() {
             type="button"
             variant="secondary"
             size="sm"
-            disabled={meta.page >= meta.totalPages}
-            onClick={() => setPage((current) => current + 1)}
+            disabled={!hasNext}
+            onClick={goNext}
           >
             Next
           </CustomButton>

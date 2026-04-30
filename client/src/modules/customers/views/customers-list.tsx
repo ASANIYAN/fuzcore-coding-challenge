@@ -1,69 +1,33 @@
-import { useMemo, useState } from "react";
-import { toast } from "sonner";
 import { CustomButton } from "@/components/custom/custom-button";
 import CustomInput from "@/components/custom/custom-input";
 import CustomSelect from "@/components/custom/custom-select";
 import ConfirmActionDialog from "@/components/custom/confirm-action-dialog";
 import CustomersTable from "@/modules/customers/components/customers-table";
 import CustomerForm from "@/modules/customers/components/customer-form";
-import {
-  useCreateCustomer,
-  useDeleteCustomer,
-} from "@/modules/customers/hooks/use-customer-mutations";
-import { useCustomers } from "@/modules/customers/hooks/use-customers";
+import { useCustomersListView } from "@/modules/customers/hooks/use-customers-list-view";
 import { customerTypeOptions } from "@/modules/customers/utils/validations";
-import { getApiErrorMessage } from "@/lib/get-api-error-message";
-import { useForm } from "react-hook-form";
 
 export default function CustomersListView() {
-  const [page, setPage] = useState(1);
-  const [limit] = useState(20);
-  const [search, setSearch] = useState("");
-  const [type, setType] = useState<"person" | "company" | "">("");
-
-  const query = useMemo(
-    () => ({
-      page,
-      limit,
-      search: search.trim() || undefined,
-      type: type || undefined,
-    }),
-    [limit, page, search, type],
-  );
-
-  const { customers, meta, isLoading, isFetching } = useCustomers(query);
-  const { createCustomer, isPending: isCreating } = useCreateCustomer(query);
-  const { deleteCustomer, isPending: isDeleting } = useDeleteCustomer(query);
-  const [deletingCustomerId, setDeletingCustomerId] = useState<string | null>(null);
-  const [pendingDeleteCustomerId, setPendingDeleteCustomerId] = useState<string | null>(null);
-
-  const filterForm = useForm({
-    defaultValues: {
-      search: "",
-      type: "",
-    },
-  });
-
-  const handleCreate = async (payload: Parameters<typeof createCustomer>[0]) => {
-    await createCustomer(payload);
-    toast.success("Customer created successfully.");
-  };
-
-  const handleDelete = async (customerId: string) => {
-    try {
-      setDeletingCustomerId(customerId);
-      await deleteCustomer(customerId);
-      toast.success("Customer deleted successfully.");
-      setPendingDeleteCustomerId(null);
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, "Unable to delete customer"));
-    } finally {
-      setDeletingCustomerId(null);
-    }
-  };
-
-  const hasPrevious = meta.page > 1;
-  const hasNext = meta.page < meta.totalPages;
+  const {
+    filterForm,
+    customers,
+    meta,
+    isLoading,
+    isFetching,
+    isCreating,
+    isDeleting,
+    deletingCustomerId,
+    pendingDeleteCustomerId,
+    hasPrevious,
+    hasNext,
+    applyFilters,
+    create,
+    openDeleteDialog,
+    closeDeleteDialog,
+    confirmDelete,
+    goPrevious,
+    goNext,
+  } = useCustomersListView();
 
   return (
     <section className="space-y-6">
@@ -76,17 +40,13 @@ export default function CustomersListView() {
 
       <div className="rounded-[--radius-lg] border border-app-border bg-app-card p-5">
         <h2 className="mb-4 text-xvi font-semibold text-app-text">Create customer</h2>
-        <CustomerForm mode="create" isSubmitting={isCreating} onSubmit={handleCreate} />
+        <CustomerForm mode="create" isSubmitting={isCreating} onSubmit={create} />
       </div>
 
       <div className="rounded-[--radius-lg] border border-app-border bg-app-card p-5">
         <h2 className="mb-4 text-xvi font-semibold text-app-text">Filter customers</h2>
         <form
-          onSubmit={filterForm.handleSubmit((values) => {
-            setPage(1);
-            setSearch(values.search ?? "");
-            setType((values.type as "person" | "company" | "") ?? "");
-          })}
+          onSubmit={applyFilters}
           className="grid gap-4 md:grid-cols-3"
         >
           <CustomInput
@@ -114,7 +74,7 @@ export default function CustomersListView() {
         <CustomersTable
           customers={customers}
           deletingCustomerId={deletingCustomerId}
-          onDelete={setPendingDeleteCustomerId}
+          onDelete={openDeleteDialog}
         />
       )}
 
@@ -128,7 +88,7 @@ export default function CustomersListView() {
             variant="secondary"
             size="sm"
             disabled={!hasPrevious || isDeleting}
-            onClick={() => setPage((current) => Math.max(1, current - 1))}
+            onClick={goPrevious}
           >
             Previous
           </CustomButton>
@@ -137,7 +97,7 @@ export default function CustomersListView() {
             variant="secondary"
             size="sm"
             disabled={!hasNext || isDeleting}
-            onClick={() => setPage((current) => current + 1)}
+            onClick={goNext}
           >
             Next
           </CustomButton>
@@ -152,15 +112,10 @@ export default function CustomersListView() {
         loading={isDeleting}
         onOpenChange={(open) => {
           if (!open) {
-            setPendingDeleteCustomerId(null);
+            closeDeleteDialog();
           }
         }}
-        onConfirm={() => {
-          if (!pendingDeleteCustomerId) {
-            return;
-          }
-          void handleDelete(pendingDeleteCustomerId);
-        }}
+        onConfirm={() => void confirmDelete()}
       />
     </section>
   );

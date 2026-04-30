@@ -1,98 +1,25 @@
-import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { toast } from "sonner";
 import { CustomButton } from "@/components/custom/custom-button";
 import { Input } from "@/components/ui/input";
 import { getApiErrorMessage } from "@/lib/get-api-error-message";
-import {
-  useDownloadTransactionImportSample,
-  useImportStatus,
-  useQueueTransactionImport,
-} from "@/modules/transactions/hooks/use-transaction-import";
-
-const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024;
-
-function formatFileSize(size: number) {
-  if (size < 1024) {
-    return `${size} B`;
-  }
-  if (size < 1024 * 1024) {
-    return `${(size / 1024).toFixed(1)} KB`;
-  }
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
-}
+import { useTransactionsImportView } from "@/modules/transactions/hooks/use-transactions-import-view";
 
 export default function TransactionsImportView() {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [jobId, setJobId] = useState<string | null>(null);
-
-  const { queueImport, isPending: isQueueing } = useQueueTransactionImport();
-  const { status, isFetching: isPolling, error: pollError } = useImportStatus(jobId);
-  const { downloadSample, isPending: isDownloadingSample } =
-    useDownloadTransactionImportSample();
-
-  const importState = status?.status ?? "idle";
-
-  const summary = useMemo(() => {
-    if (!status) {
-      return null;
-    }
-
-    return [
-      { label: "Total rows", value: status.totalRows ?? 0 },
-      { label: "Imported", value: status.importedRows ?? 0 },
-      { label: "Duplicates", value: status.duplicateRows ?? 0 },
-      { label: "Failed", value: status.failedRows ?? 0 },
-    ];
-  }, [status]);
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] ?? null;
-    if (!file) {
-      setSelectedFile(null);
-      return;
-    }
-
-    if (!file.name.toLowerCase().endsWith(".csv")) {
-      toast.error("Please upload a CSV file.");
-      event.target.value = "";
-      setSelectedFile(null);
-      return;
-    }
-
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      toast.error("File is too large. Maximum size is 2MB.");
-      event.target.value = "";
-      setSelectedFile(null);
-      return;
-    }
-
-    setSelectedFile(file);
-  };
-
-  const handleQueueImport = async () => {
-    if (!selectedFile) {
-      toast.error("Please choose a CSV file to upload.");
-      return;
-    }
-
-    try {
-      const result = await queueImport(selectedFile);
-      setJobId(result.jobId);
-      toast.success("Import queued successfully. We are processing your file.");
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, "Unable to queue import"));
-    }
-  };
-
-  const handleDownloadSample = async () => {
-    try {
-      await downloadSample();
-      toast.success("Sample CSV downloaded.");
-    } catch (error) {
-      toast.error(getApiErrorMessage(error, "Unable to download sample CSV"));
-    }
-  };
+  const {
+    selectedFile,
+    jobId,
+    status,
+    importState,
+    summary,
+    isQueueing,
+    isPolling,
+    pollError,
+    isDownloadingSample,
+    formattedSelectedFileSize,
+    changeFile,
+    queue,
+    downloadSampleFile,
+  } = useTransactionsImportView();
 
   return (
     <section className="space-y-6">
@@ -115,13 +42,13 @@ export default function TransactionsImportView() {
               id="transactions-csv"
               type="file"
               accept=".csv,text/csv"
-              onChange={handleFileChange}
+              onChange={changeFile}
               className="h-auto rounded-[--radius-md] border-app-border bg-app-card px-3 py-2 text-xiii text-app-text"
             />
             <p className="text-xii text-app-text-muted">Max file size: 2MB</p>
             {selectedFile ? (
               <p className="text-xii text-app-text-muted">
-                Selected: <span className="text-app-text">{selectedFile.name}</span> ({formatFileSize(selectedFile.size)})
+                Selected: <span className="text-app-text">{selectedFile.name}</span> ({formattedSelectedFileSize})
               </p>
             ) : null}
           </div>
@@ -130,7 +57,7 @@ export default function TransactionsImportView() {
             <CustomButton
               type="button"
               loading={isQueueing}
-              onClick={handleQueueImport}
+              onClick={() => void queue()}
               disabled={!selectedFile}
             >
               Start import
@@ -139,7 +66,7 @@ export default function TransactionsImportView() {
               type="button"
               variant="secondary"
               loading={isDownloadingSample}
-              onClick={handleDownloadSample}
+              onClick={() => void downloadSampleFile()}
             >
               Download sample CSV
             </CustomButton>
