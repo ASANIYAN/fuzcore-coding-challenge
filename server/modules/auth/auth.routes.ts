@@ -18,7 +18,16 @@ const authController = new AuthController(authService);
 
 export const authRouter = Router();
 
-authRouter.get("/session", optionalAuth, authController.session);
+authRouter.get(
+  "/session",
+  (req, _res, next) => {
+    delete req.headers["if-none-match"];
+    delete req.headers["if-modified-since"];
+    next();
+  },
+  optionalAuth,
+  authController.session,
+);
 
 authRouter.post(
   "/signup",

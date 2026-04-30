@@ -21,7 +21,9 @@ export function useSessionStatus() {
     retry: false,
     staleTime: 60_000,
     queryFn: async () => {
-      const response = await authApi.get<SessionStatusResponse>("/auth/session");
+      const response = await authApi.get<SessionStatusResponse>("/auth/session", {
+        params: { t: Date.now() },
+      });
       return response.data.data;
     },
   });

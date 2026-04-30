@@ -8,9 +8,21 @@ import { globalErrorMiddleware } from "./middleware/error.middleware";
 import { sanitizeMiddleware } from "./middleware/sanitize.middleware";
 import { env } from "./lib/env";
 
+function normalizeOrigin(origin: string) {
+  return origin.trim().replace(/\/+$/, "");
+}
+
 export async function createApp() {
   const app = express();
-  const allowedOrigin = env.FRONTEND_ORIGIN ?? "http://localhost:5001";
+  const configuredOrigin = normalizeOrigin(
+    env.FRONTEND_ORIGIN ?? "http://localhost:5001",
+  );
+  const allowedOrigins = new Set([
+    configuredOrigin,
+    "http://localhost:5001",
+    "http://127.0.0.1:5001",
+    "https://salena-traumatic-zada.ngrok-free.dev",
+  ]);
 
   app.set("trust proxy", true);
 
@@ -41,11 +53,18 @@ export async function createApp() {
           return callback(null, true);
         }
 
+        const normalizedOrigin = normalizeOrigin(origin);
+        const isLocalLoopback = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(
+          normalizedOrigin,
+        );
+        const isNgrok = /^https:\/\/[a-z0-9-]+\.ngrok-free\.dev$/i.test(
+          normalizedOrigin,
+        );
+
         if (
-          origin === allowedOrigin ||
-          origin === "http://localhost:5001" ||
-          origin === "http://127.0.0.1:5001" ||
-          origin === "https://salena-traumatic-zada.ngrok-free.dev"
+          isLocalLoopback ||
+          isNgrok ||
+          allowedOrigins.has(normalizedOrigin)
         ) {
           return callback(null, true);
         }
@@ -53,8 +72,7 @@ export async function createApp() {
         return callback(new Error("Origin not allowed by CORS"));
       },
       credentials: true,
-      methods: ["GET", "POST", "PATCH", "DELETE"],
-      allowedHeaders: ["Content-Type", "ngrok-skip-browser-warning"],
+      methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     }),
   );
   app.use(express.json());
