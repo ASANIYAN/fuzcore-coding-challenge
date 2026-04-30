@@ -5,14 +5,16 @@ import { cn } from "@/lib/utils";
 import { CustomSpinner } from "@/components/custom/custom-spinner";
 
 const customButtonVariants = cva(
-  "inline-flex items-center justify-center rounded-[--radius-md] font-medium transition-colors",
+  "inline-flex items-center justify-center gap-2 rounded-[--radius-md] font-semibold shadow-button transition-all duration-normal ease-default focus-visible:ring-2 focus-visible:ring-app-focus-ring active:translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60",
   {
     variants: {
       variant: {
-        primary: "bg-app-primary text-app-primary-text hover:bg-app-primary-hover",
+        primary:
+          "bg-app-primary !text-white hover:bg-app-primary-hover hover:shadow-md",
         secondary:
-          "border border-app-secondary-border bg-app-secondary text-app-secondary-text hover:bg-app-secondary-hover",
-        danger: "bg-app-danger text-white hover:bg-app-danger-hover",
+          "border border-app-secondary-border bg-app-secondary !text-app-secondary-text hover:bg-app-secondary-hover hover:shadow-sm",
+        danger:
+          "bg-app-danger text-white hover:bg-app-danger-hover hover:shadow-sm",
       },
       size: {
         sm: "h-8 px-3 text-xii",
@@ -53,7 +55,10 @@ export function CustomButton({
 }: CustomButtonProps) {
   return (
     <Button
-      className={cn(customButtonVariants({ variant, size, fullWidth }), className)}
+      className={cn(
+        customButtonVariants({ variant, size, fullWidth }),
+        className,
+      )}
       disabled={loading || disabled}
       {...props}
     >

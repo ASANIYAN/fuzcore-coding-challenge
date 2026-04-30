@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type React from "react";
+import React from "react";
 import {
   type Control,
   Controller,
@@ -58,6 +58,9 @@ export function CustomInput<T extends FieldValues>({
   pattern,
   sanitizeValue,
 }: CustomInputProps<T>) {
+  const [isFocused, setIsFocused] = React.useState(false);
+  const resolvedInputType = type === "password" && isFocused ? "text" : type;
+
   return (
     <Controller
       control={control}
@@ -92,13 +95,17 @@ export function CustomInput<T extends FieldValues>({
               <Input
                 ref={ref}
                 id={name}
-                type={type}
+                type={resolvedInputType}
                 value={value ?? ""}
                 onChange={(event) => {
                   const inputValue = event.target.value;
                   onChange(sanitizeValue ? sanitizeValue(inputValue) : inputValue);
                 }}
-                onBlur={onBlur}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => {
+                  setIsFocused(false);
+                  onBlur();
+                }}
                 placeholder={placeholder}
                 disabled={disabled}
                 inputMode={inputMode}

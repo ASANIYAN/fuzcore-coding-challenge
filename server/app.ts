@@ -23,7 +23,13 @@ export async function createApp() {
     res.setHeader("ngrok-skip-browser-warning", "true");
     next();
   });
-  app.use(helmet());
+  app.use(
+    helmet({
+      // Vite injects an inline React preamble in development.
+      // Keep CSP strict in production, but disable it for local dev.
+      contentSecurityPolicy: env.NODE_ENV === "production" ? undefined : false,
+    }),
+  );
   app.use(
     cors({
       origin: (origin, callback) => {

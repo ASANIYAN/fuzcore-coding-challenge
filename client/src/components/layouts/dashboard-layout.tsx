@@ -6,14 +6,14 @@ export default function DashboardLayout() {
   const { logout, isLoggingOut } = useLogout();
 
   return (
-    <div className="min-h-screen bg-app-surface text-app-text">
-      <header className="border-b border-app-border bg-app-card">
-        <nav className="mx-auto flex max-w-5xl items-center gap-4 px-6 py-4 text-sm">
-          <Link to="/dashboard" className="text-app-primary hover:underline">Dashboard</Link>
-          <Link to="/dashboard/customers" className="text-app-primary hover:underline">Customers</Link>
-          <Link to="/dashboard/categories" className="text-app-primary hover:underline">Categories</Link>
-          <Link to="/dashboard/transactions" className="text-app-primary hover:underline">Transactions</Link>
-          <Link to="/dashboard/invoices" className="text-app-primary hover:underline">Invoices</Link>
+    <div className="min-h-screen text-app-text">
+      <header className="sticky top-0 z-20 border-b border-app-border/80 bg-app-card/90 backdrop-blur-md">
+        <nav className="mx-auto flex max-w-6xl items-center gap-2 px-6 py-4 text-xiii">
+          <Link to="/dashboard" className="rounded-full px-3 py-1.5 text-app-primary transition-all duration-fast hover:bg-app-primary-dim hover:text-app-primary-hover">Dashboard</Link>
+          <Link to="/dashboard/customers" className="rounded-full px-3 py-1.5 text-app-primary transition-all duration-fast hover:bg-app-primary-dim hover:text-app-primary-hover">Customers</Link>
+          <Link to="/dashboard/categories" className="rounded-full px-3 py-1.5 text-app-primary transition-all duration-fast hover:bg-app-primary-dim hover:text-app-primary-hover">Categories</Link>
+          <Link to="/dashboard/transactions" className="rounded-full px-3 py-1.5 text-app-primary transition-all duration-fast hover:bg-app-primary-dim hover:text-app-primary-hover">Transactions</Link>
+          <Link to="/dashboard/invoices" className="rounded-full px-3 py-1.5 text-app-primary transition-all duration-fast hover:bg-app-primary-dim hover:text-app-primary-hover">Invoices</Link>
           <div className="ml-auto">
             <CustomButton
               type="button"
@@ -27,7 +27,7 @@ export default function DashboardLayout() {
           </div>
         </nav>
       </header>
-      <main className="mx-auto max-w-5xl px-6 py-8">
+      <main className="mx-auto max-w-6xl px-6 py-8">
         <Outlet />
       </main>
     </div>
