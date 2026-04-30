@@ -25,7 +25,7 @@ export function useVerifyEmailForm(initialEmail = "") {
     try {
       await unauthApi.post("/auth/verify-email", values);
       toast.success("Email verified successfully");
-      void navigate("/dashboard");
+      void navigate("/login");
     } catch (error) {
       applyApiFormErrors(form, error, "Unable to verify email");
       toast.error("Verification failed. Please check your code and try again.");

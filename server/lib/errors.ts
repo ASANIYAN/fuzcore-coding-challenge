@@ -98,6 +98,12 @@ export class ForbiddenError extends AppError {
   }
 }
 
+export class UserNotVerifiedError extends AppError {
+  constructor(message = "Your email is not verified. Please verify your account.") {
+    super("USER_NOT_VERIFIED", message, 403);
+  }
+}
+
 export class ValidationError extends AppError {
   constructor(details: unknown[]) {
     super(

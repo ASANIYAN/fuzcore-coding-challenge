@@ -4,6 +4,7 @@ import type { AuthService } from "./auth.service";
 import type {
   ForgotPasswordInput,
   LoginInput,
+  ResendVerificationInput,
   ResetPasswordInput,
   SignupInput,
   VerifyEmailInput,
@@ -37,6 +38,14 @@ export class AuthController {
     res: Response,
   ) => {
     const data = await this.authService.verifyEmail(req.body);
+    return this.ok(res, data);
+  };
+
+  resendVerification = async (
+    req: Request<unknown, unknown, ResendVerificationInput>,
+    res: Response,
+  ) => {
+    const data = await this.authService.resendVerification(req.body);
     return this.ok(res, data);
   };
 

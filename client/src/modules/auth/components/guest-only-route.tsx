@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSessionStatus } from "@/modules/auth/hooks/use-session-status";
 
 export default function GuestOnlyRoute() {
-  const { isAuthenticated, isLoading } = useSessionStatus();
+  const { isAuthenticated, isLoading, user } = useSessionStatus();
 
   if (isLoading) {
     return (
@@ -16,7 +16,7 @@ export default function GuestOnlyRoute() {
     );
   }
 
-  if (isAuthenticated) {
+  if (isAuthenticated && user?.emailVerifiedAt) {
     return <Navigate to="/dashboard" replace />;
   }
 
