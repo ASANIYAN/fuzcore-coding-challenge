@@ -1,7 +1,6 @@
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import CustomInput from "@/components/custom/custom-input";
-import { CustomButton } from "@/components/custom/custom-button";
 import { useDashboard } from "@/modules/dashboard/hooks/use-dashboard";
 
 function toIsoStartOfDay(dateString: string) {
@@ -37,13 +36,13 @@ export default function DashboardView() {
 
       <div className="rounded-[--radius-lg] border border-app-border bg-app-card p-5">
         <h2 className="mb-4 text-xvi font-semibold text-app-text">Date range</h2>
-        <form className="grid gap-4 md:grid-cols-3">
+        <form className="grid gap-4 md:grid-cols-2">
           <CustomInput control={filterForm.control} name="from" label="From" type="date" />
           <CustomInput control={filterForm.control} name="to" label="To" type="date" />
-          <div className="flex items-end">
-            <CustomButton type="button" loading={isFetching}>Auto refresh</CustomButton>
-          </div>
         </form>
+        <p className="mt-3 text-xii text-app-text-muted">
+          Dashboard metrics update automatically when date filters change.
+        </p>
       </div>
 
       {isLoading || !dashboard ? (

@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { CustomButton } from "@/components/custom/custom-button";
+import ConfirmActionDialog from "@/components/custom/confirm-action-dialog";
 import CustomerForm from "@/modules/customers/components/customer-form";
 import { useCustomer } from "@/modules/customers/hooks/use-customer";
 import {
@@ -23,6 +25,7 @@ export default function CustomerDetailsView() {
   const { customer, isLoading, error } = useCustomer(id);
   const { updateCustomer, isPending: isUpdating } = useUpdateCustomer(defaultListQuery);
   const { deleteCustomer, isPending: isDeleting } = useDeleteCustomer(defaultListQuery);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   if (isLoading) {
     return <p className="text-xiii text-app-text-muted">Loading customer details...</p>;
@@ -49,14 +52,10 @@ export default function CustomerDetailsView() {
   };
 
   const handleDelete = async () => {
-    const confirmed = window.confirm("Are you sure you want to delete this customer?");
-    if (!confirmed) {
-      return;
-    }
-
     try {
       await deleteCustomer(customer.id);
       toast.success("Customer deleted successfully.");
+      setIsDeleteDialogOpen(false);
       void navigate("/dashboard/customers");
     } catch (deleteError) {
       toast.error(getApiErrorMessage(deleteError, "Unable to delete customer"));
@@ -82,13 +81,28 @@ export default function CustomerDetailsView() {
       </div>
 
       <div className="flex items-center gap-3">
-        <CustomButton type="button" variant="danger" loading={isDeleting} onClick={handleDelete}>
+        <CustomButton
+          type="button"
+          variant="danger"
+          loading={isDeleting}
+          onClick={() => setIsDeleteDialogOpen(true)}
+        >
           Delete customer
         </CustomButton>
         <Link className="text-xiii text-app-primary hover:underline" to="/dashboard/customers">
           Back to customers
         </Link>
       </div>
+
+      <ConfirmActionDialog
+        open={isDeleteDialogOpen}
+        title="Delete customer?"
+        description="This will remove the customer from your active records."
+        confirmLabel="Delete customer"
+        loading={isDeleting}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={() => void handleDelete()}
+      />
     </section>
   );
 }

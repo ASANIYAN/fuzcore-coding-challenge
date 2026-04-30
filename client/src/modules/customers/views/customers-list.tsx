@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { CustomButton } from "@/components/custom/custom-button";
 import CustomInput from "@/components/custom/custom-input";
 import CustomSelect from "@/components/custom/custom-select";
+import ConfirmActionDialog from "@/components/custom/confirm-action-dialog";
 import CustomersTable from "@/modules/customers/components/customers-table";
 import CustomerForm from "@/modules/customers/components/customer-form";
 import {
@@ -34,6 +35,7 @@ export default function CustomersListView() {
   const { createCustomer, isPending: isCreating } = useCreateCustomer(query);
   const { deleteCustomer, isPending: isDeleting } = useDeleteCustomer(query);
   const [deletingCustomerId, setDeletingCustomerId] = useState<string | null>(null);
+  const [pendingDeleteCustomerId, setPendingDeleteCustomerId] = useState<string | null>(null);
 
   const filterForm = useForm({
     defaultValues: {
@@ -48,15 +50,11 @@ export default function CustomersListView() {
   };
 
   const handleDelete = async (customerId: string) => {
-    const confirmed = window.confirm("Are you sure you want to delete this customer?");
-    if (!confirmed) {
-      return;
-    }
-
     try {
       setDeletingCustomerId(customerId);
       await deleteCustomer(customerId);
       toast.success("Customer deleted successfully.");
+      setPendingDeleteCustomerId(null);
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Unable to delete customer"));
     } finally {
@@ -116,7 +114,7 @@ export default function CustomersListView() {
         <CustomersTable
           customers={customers}
           deletingCustomerId={deletingCustomerId}
-          onDelete={handleDelete}
+          onDelete={setPendingDeleteCustomerId}
         />
       )}
 
@@ -145,6 +143,25 @@ export default function CustomersListView() {
           </CustomButton>
         </div>
       </div>
+
+      <ConfirmActionDialog
+        open={!!pendingDeleteCustomerId}
+        title="Delete customer?"
+        description="This will remove the customer from active lists."
+        confirmLabel="Delete customer"
+        loading={isDeleting}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingDeleteCustomerId(null);
+          }
+        }}
+        onConfirm={() => {
+          if (!pendingDeleteCustomerId) {
+            return;
+          }
+          void handleDelete(pendingDeleteCustomerId);
+        }}
+      />
     </section>
   );
 }

@@ -1,8 +1,13 @@
 import axios from "axios";
 import { notifyAuthFailure } from "@/lib/auth-failure";
 
-const baseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5001";
-const apiBaseUrl = `${baseUrl}/api`;
+function getApiBaseUrl() {
+  const rawBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5001/api";
+  const trimmedBaseUrl = rawBaseUrl.replace(/\/+$/, "");
+  return trimmedBaseUrl.endsWith("/api") ? trimmedBaseUrl : `${trimmedBaseUrl}/api`;
+}
+
+const apiBaseUrl = getApiBaseUrl();
 
 export const unauthApi = axios.create({
   baseURL: apiBaseUrl,

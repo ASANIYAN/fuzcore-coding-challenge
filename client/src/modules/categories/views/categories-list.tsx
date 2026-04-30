@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { CustomButton } from "@/components/custom/custom-button";
+import ConfirmActionDialog from "@/components/custom/confirm-action-dialog";
 import CustomSelect from "@/components/custom/custom-select";
 import CategoriesTable from "@/modules/categories/components/categories-table";
 import CategoryForm from "@/modules/categories/components/category-form";
@@ -22,6 +23,7 @@ export default function CategoriesListView() {
   const [typeFilter, setTypeFilter] = useState<"income" | "expense" | undefined>(undefined);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
+  const [pendingDeleteCategoryId, setPendingDeleteCategoryId] = useState<string | null>(null);
 
   const query = useMemo(() => ({ type: typeFilter }), [typeFilter]);
 
@@ -55,15 +57,11 @@ export default function CategoriesListView() {
   };
 
   const handleDelete = async (categoryId: string) => {
-    const confirmed = window.confirm("Are you sure you want to delete this category?");
-    if (!confirmed) {
-      return;
-    }
-
     try {
       setDeletingCategoryId(categoryId);
       await deleteCategory(categoryId);
       toast.success("Category deleted successfully.");
+      setPendingDeleteCategoryId(null);
       if (editingCategory?.id === categoryId) {
         setEditingCategory(null);
       }
@@ -134,9 +132,28 @@ export default function CategoriesListView() {
           editingCategoryId={isUpdating && editingCategory ? editingCategory.id : null}
           deletingCategoryId={deletingCategoryId}
           onEdit={(category) => setEditingCategory(category)}
-          onDelete={handleDelete}
+          onDelete={setPendingDeleteCategoryId}
         />
       )}
+
+      <ConfirmActionDialog
+        open={!!pendingDeleteCategoryId}
+        title="Delete category?"
+        description="This category will be removed from active use in your workspace."
+        confirmLabel="Delete category"
+        loading={!!pendingDeleteCategoryId && deletingCategoryId === pendingDeleteCategoryId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingDeleteCategoryId(null);
+          }
+        }}
+        onConfirm={() => {
+          if (!pendingDeleteCategoryId) {
+            return;
+          }
+          void handleDelete(pendingDeleteCategoryId);
+        }}
+      />
     </section>
   );
 }

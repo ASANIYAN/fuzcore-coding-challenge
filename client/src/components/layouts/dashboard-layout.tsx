@@ -14,7 +14,6 @@ export default function DashboardLayout() {
           <Link to="/dashboard/categories" className="text-app-primary hover:underline">Categories</Link>
           <Link to="/dashboard/transactions" className="text-app-primary hover:underline">Transactions</Link>
           <Link to="/dashboard/invoices" className="text-app-primary hover:underline">Invoices</Link>
-          <Link to="/dashboard/profile" className="text-app-primary hover:underline">Profile</Link>
           <div className="ml-auto">
             <CustomButton
               type="button"

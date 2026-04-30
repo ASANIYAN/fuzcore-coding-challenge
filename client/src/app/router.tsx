@@ -7,7 +7,6 @@ import ForgotPasswordView from "@/modules/auth/views/forgot-password";
 import VerifyEmailView from "@/modules/auth/views/verify-email";
 import ResetPasswordView from "@/modules/auth/views/reset-password";
 import DashboardView from "@/modules/dashboard/views/dashboard-view";
-import ProfileView from "@/modules/profile/views/profile-view";
 import CustomersListView from "@/modules/customers/views/customers-list";
 import CustomerDetailsView from "@/modules/customers/views/customer-details";
 import CategoriesListView from "@/modules/categories/views/categories-list";
@@ -33,7 +32,6 @@ const dashboardRoutes: RouteObject[] = [
       { path: "invoices", element: <InvoicesListView /> },
       { path: "invoices/new", element: <InvoiceCreateView /> },
       { path: "invoices/:id", element: <InvoiceDetailsView /> },
-      { path: "profile", element: <ProfileView /> },
     ],
   },
 ];

@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { CustomButton } from "@/components/custom/custom-button";
+import ConfirmActionDialog from "@/components/custom/confirm-action-dialog";
 import CustomInput from "@/components/custom/custom-input";
 import CustomSelect from "@/components/custom/custom-select";
 import { useCategories } from "@/modules/categories/hooks/use-categories";
@@ -50,6 +51,7 @@ export default function TransactionsListView() {
   const [endDateFilter, setEndDateFilter] = useState<string | undefined>(undefined);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
+  const [pendingDeleteTransactionId, setPendingDeleteTransactionId] = useState<string | null>(null);
 
   const query: ListTransactionsQuery = useMemo(
     () => ({
@@ -102,15 +104,11 @@ export default function TransactionsListView() {
   };
 
   const handleDelete = async (transactionId: string) => {
-    const confirmed = window.confirm("Are you sure you want to delete this transaction?");
-    if (!confirmed) {
-      return;
-    }
-
     try {
       setDeletingTransactionId(transactionId);
       await deleteTransaction(transactionId);
       toast.success("Transaction deleted successfully.");
+      setPendingDeleteTransactionId(null);
       if (editingTransaction?.id === transactionId) {
         setEditingTransaction(null);
       }
@@ -241,7 +239,7 @@ export default function TransactionsListView() {
           editingTransactionId={isUpdating && editingTransaction ? editingTransaction.id : null}
           deletingTransactionId={deletingTransactionId}
           onEdit={(transaction) => setEditingTransaction(transaction)}
-          onDelete={handleDelete}
+          onDelete={setPendingDeleteTransactionId}
         />
       )}
 
@@ -270,6 +268,25 @@ export default function TransactionsListView() {
           </CustomButton>
         </div>
       </div>
+
+      <ConfirmActionDialog
+        open={!!pendingDeleteTransactionId}
+        title="Delete transaction?"
+        description="This transaction will be removed from your records."
+        confirmLabel="Delete transaction"
+        loading={!!pendingDeleteTransactionId && deletingTransactionId === pendingDeleteTransactionId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingDeleteTransactionId(null);
+          }
+        }}
+        onConfirm={() => {
+          if (!pendingDeleteTransactionId) {
+            return;
+          }
+          void handleDelete(pendingDeleteTransactionId);
+        }}
+      />
     </section>
   );
 }
