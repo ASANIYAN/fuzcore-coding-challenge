@@ -1,4 +1,5 @@
 import { CustomButton } from "@/components/custom/custom-button";
+import DataTable, { type ColumnDef } from "@/components/custom/data-table";
 import type { Category } from "@/modules/categories/types";
 
 type CategoriesTableProps = {
@@ -16,59 +17,63 @@ export default function CategoriesTable({
   onEdit,
   onDelete,
 }: CategoriesTableProps) {
-  if (!categories.length) {
-    return (
-      <div className="rounded-[--radius-lg] border border-app-border bg-app-card p-6 text-xiii text-app-text-muted">
-        No categories found. Create one to start tracking transactions.
-      </div>
-    );
-  }
+  const columns: ColumnDef<Category>[] = [
+    {
+      accessorKey: "name",
+      header: "Name",
+      cell: ({ row }) => row.original.name,
+    },
+    {
+      accessorKey: "type",
+      header: "Type",
+      cell: ({ row }) => (
+        <span className="capitalize text-app-text-muted">{row.original.type}</span>
+      ),
+    },
+    {
+      accessorKey: "createdAt",
+      header: "Created",
+      cell: ({ row }) => (
+        <span className="text-app-text-muted">
+          {new Date(row.original.createdAt).toLocaleDateString()}
+        </span>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <CustomButton
+            type="button"
+            variant="secondary"
+            size="sm"
+            loading={editingCategoryId === row.original.id}
+            onClick={() => onEdit(row.original)}
+          >
+            Edit
+          </CustomButton>
+          <CustomButton
+            type="button"
+            variant="danger"
+            size="sm"
+            loading={deletingCategoryId === row.original.id}
+            onClick={() => onDelete(row.original.id)}
+          >
+            Delete
+          </CustomButton>
+        </div>
+      ),
+    },
+  ];
 
   return (
-    <div className="overflow-x-auto rounded-[--radius-lg] border border-app-border bg-app-card">
-      <table className="w-full min-w-[620px] text-left text-xiii">
-        <thead className="border-b border-app-border bg-app-surface text-app-text-muted">
-          <tr>
-            <th className="px-4 py-3 font-medium">Name</th>
-            <th className="px-4 py-3 font-medium">Type</th>
-            <th className="px-4 py-3 font-medium">Created</th>
-            <th className="px-4 py-3 font-medium">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {categories.map((category) => (
-            <tr key={category.id} className="border-b border-app-border last:border-b-0">
-              <td className="px-4 py-3 text-app-text">{category.name}</td>
-              <td className="px-4 py-3 capitalize text-app-text-muted">{category.type}</td>
-              <td className="px-4 py-3 text-app-text-muted">
-                {new Date(category.createdAt).toLocaleDateString()}
-              </td>
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <CustomButton
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    loading={editingCategoryId === category.id}
-                    onClick={() => onEdit(category)}
-                  >
-                    Edit
-                  </CustomButton>
-                  <CustomButton
-                    type="button"
-                    variant="danger"
-                    size="sm"
-                    loading={deletingCategoryId === category.id}
-                    onClick={() => onDelete(category.id)}
-                  >
-                    Delete
-                  </CustomButton>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      columns={columns}
+      data={categories}
+      pageSize={10}
+      emptyTitle="No categories found"
+      emptyDescription="Create one to start tracking transactions."
+    />
   );
 }
