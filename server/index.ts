@@ -54,7 +54,9 @@ async function startServer(port: number) {
     const host = hosts[i];
     try {
       await listenOnHost(port, host);
-      logger.info({ host, port }, "server started");
+      const bindUrl = `http://${host}:${port}`;
+      const localUrl = host === "0.0.0.0" ? `http://localhost:${port}` : bindUrl;
+      logger.info({ host, port, url: localUrl, bindUrl }, "server started");
       return;
     } catch (error) {
       const listenError = error as NodeJS.ErrnoException;
