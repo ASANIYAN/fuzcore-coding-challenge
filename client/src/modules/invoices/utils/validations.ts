@@ -31,7 +31,10 @@ export const listInvoicesQuerySchema = z.object({
 
 export const invoiceItemFormSchema = z.object({
   description: z.string().trim().min(1, "Description is required"),
-  quantity: z.coerce.number().positive("Quantity must be greater than zero"),
+  quantity: z.coerce
+    .number()
+    .int("Quantity must be a whole number")
+    .min(1, "Quantity must be at least 1"),
   unitPrice: amountInputSchema("Unit price"),
   sortOrder: z.coerce.number().int().min(0),
 });

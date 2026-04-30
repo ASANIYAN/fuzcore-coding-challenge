@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import CustomAmountInput from "@/components/custom/custom-amount-input";
 import { CustomButton } from "@/components/custom/custom-button";
 import CustomDatePicker from "@/components/custom/custom-date-picker";
@@ -90,8 +90,17 @@ export default function InvoiceForm({
     });
   }, [form, initialValue]);
 
-  const watchedItems = form.watch("items");
-  const watchedTaxRate = Number(form.watch("taxRate") ?? 0);
+  const watchedItems =
+    (useWatch({
+      control: form.control,
+      name: "items",
+    }) as InvoiceFormValues["items"]) ?? [];
+  const watchedTaxRate = Number(
+    useWatch<InvoiceFormValues>({
+      control: form.control,
+      name: "taxRate",
+    }) ?? 0,
+  );
 
   const totals = useMemo(() => {
     const subtotal = (watchedItems ?? []).reduce((sum, item) => {
@@ -164,7 +173,6 @@ export default function InvoiceForm({
           control={form.control}
           name="taxRate"
           label="Tax rate (%)"
-          type="number"
           placeholder="7.5"
         />
       </div>
@@ -229,6 +237,7 @@ export default function InvoiceForm({
                 name={`items.${index}.quantity`}
                 label="Qty"
                 type="number"
+                min={1}
                 placeholder="1"
               />
             </div>

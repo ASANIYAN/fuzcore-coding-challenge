@@ -38,6 +38,7 @@ interface CustomInputProps<T extends FieldValues> {
     | "datetime-local";
   error?: string;
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  min?: number;
   maxLength?: number;
   pattern?: string;
   sanitizeValue?: (value: string) => string;
@@ -59,6 +60,7 @@ export function CustomInput<T extends FieldValues>({
   type = "text",
   error,
   inputMode,
+  min,
   maxLength,
   pattern,
   sanitizeValue,
@@ -121,6 +123,7 @@ export function CustomInput<T extends FieldValues>({
                 placeholder={placeholder}
                 disabled={disabled}
                 inputMode={inputMode}
+                min={min}
                 maxLength={maxLength}
                 pattern={pattern}
                 aria-invalid={hasError}
