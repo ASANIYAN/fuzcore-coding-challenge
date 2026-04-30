@@ -15,6 +15,10 @@ export const verifyEmailSchema = z.object({
   code: z.string().trim().min(4).max(10),
 });
 
+export const resendVerificationSchema = z.object({
+  email: z.string().email(),
+});
+
 export const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
@@ -32,6 +36,7 @@ export const resetPasswordSchema = z.object({
 
 export type SignupInput = z.infer<typeof signupSchema>;
 export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
+export type ResendVerificationInput = z.infer<typeof resendVerificationSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

@@ -7,6 +7,7 @@ import { AuthService } from "./auth.service";
 import {
   forgotPasswordSchema,
   loginSchema,
+  resendVerificationSchema,
   resetPasswordSchema,
   signupSchema,
   verifyEmailSchema,
@@ -31,6 +32,13 @@ authRouter.post(
   rateLimit("auth-strict"),
   validate(verifyEmailSchema),
   authController.verifyEmail,
+);
+
+authRouter.post(
+  "/resend-verification",
+  rateLimit("auth-strict"),
+  validate(resendVerificationSchema),
+  authController.resendVerification,
 );
 
 authRouter.post(

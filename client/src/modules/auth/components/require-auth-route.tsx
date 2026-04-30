@@ -4,7 +4,7 @@ import { useSessionStatus } from "@/modules/auth/hooks/use-session-status";
 
 export default function RequireAuthRoute() {
   const location = useLocation();
-  const { isAuthenticated, isLoading, isError } = useSessionStatus();
+  const { isAuthenticated, isLoading, isError, user } = useSessionStatus();
 
   if (isLoading) {
     return (
@@ -32,6 +32,15 @@ export default function RequireAuthRoute() {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+
+  if (isAuthenticated && !user?.emailVerifiedAt) {
+    return (
+      <Navigate
+        to={`/login?email=${encodeURIComponent(user?.email ?? "")}&unverified=1`}
+        replace
+      />
+    );
   }
 
   return <Outlet />;

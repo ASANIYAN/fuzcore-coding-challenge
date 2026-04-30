@@ -15,6 +15,7 @@ import TransactionsImportView from "@/modules/transactions/views/transactions-im
 import InvoicesListView from "@/modules/invoices/views/invoices-list";
 import InvoiceCreateView from "@/modules/invoices/views/invoice-create";
 import InvoiceDetailsView from "@/modules/invoices/views/invoice-details";
+import InvoicePaymentResultView from "@/modules/invoices/views/invoice-payment-result";
 import RequireAuthRoute from "@/modules/auth/components/require-auth-route";
 import GuestOnlyRoute from "@/modules/auth/components/guest-only-route";
 
@@ -43,6 +44,7 @@ const unprotectedRoutes: RouteObject[] = [
   { path: "/forgot-password", element: <ForgotPasswordView /> },
   { path: "/verify-email", element: <VerifyEmailView /> },
   { path: "/reset-password", element: <ResetPasswordView /> },
+  { path: "/invoices/:id", element: <InvoicePaymentResultView /> },
 ];
 
 export const routes: RouteObject[] = [

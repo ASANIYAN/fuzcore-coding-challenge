@@ -4,6 +4,7 @@ import {
   BadRequestError,
   ConflictError,
   UnauthorizedError,
+  UserNotVerifiedError,
 } from "../../lib/errors";
 import { hashOtp, verifyOtpHash } from "../../lib/hmac";
 import { hashPassword, verifyPassword } from "../../lib/password";
@@ -12,6 +13,7 @@ import { getSessionExpiryDate } from "../../lib/session";
 import type {
   ForgotPasswordInput,
   LoginInput,
+  ResendVerificationInput,
   ResetPasswordInput,
   SignupInput,
   VerifyEmailInput,
@@ -216,7 +218,7 @@ export class AuthService {
     }
 
     if (!user.emailVerifiedAt) {
-      throw new UnauthorizedError("Email is not verified");
+      throw new UserNotVerifiedError();
     }
 
     const sessionExpiresAt = getSessionExpiryDate(now);
@@ -239,6 +241,65 @@ export class AuthService {
       },
       sessionId: insertedSessions[0].id,
       message: "Login successful.",
+    };
+  }
+
+  async resendVerification(input: ResendVerificationInput) {
+    const now = new Date();
+    const email = normalizeEmail(input.email);
+
+    const userRows = await this.db
+      .select({
+        id: users.id,
+        email: users.email,
+        emailVerifiedAt: users.emailVerifiedAt,
+      })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    const user = userRows[0];
+    if (!user || user.emailVerifiedAt) {
+      return {
+        message: "If your account is not verified, a verification code has been sent.",
+      };
+    }
+
+    const otpCode = generateOtpCode();
+    const otpHash = hashOtp(otpCode);
+    const otpExpiresAt = new Date(now.getTime() + 15 * 60 * 1000);
+
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(verificationCodes)
+        .set({
+          supersededAt: now,
+        })
+        .where(
+          and(
+            eq(verificationCodes.userId, user.id),
+            eq(verificationCodes.type, "email_verification"),
+            isNull(verificationCodes.supersededAt),
+            isNull(verificationCodes.usedAt),
+          ),
+        );
+
+      await tx.insert(verificationCodes).values({
+        userId: user.id,
+        type: "email_verification",
+        codeHash: otpHash,
+        expiresAt: otpExpiresAt,
+      });
+    });
+
+    await this.enqueueEmail({
+      to: user.email,
+      subject: "Verify your email",
+      text: `Your verification code is ${otpCode}. It expires in 15 minutes.`,
+    });
+
+    return {
+      message: "If your account is not verified, a verification code has been sent.",
     };
   }
 
