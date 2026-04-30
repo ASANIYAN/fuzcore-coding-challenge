@@ -3,6 +3,7 @@ import { CustomButton } from "@/components/custom/custom-button";
 import ConfirmActionDialog from "@/components/custom/confirm-action-dialog";
 import CustomDatePicker from "@/components/custom/custom-date-picker";
 import CustomSelect from "@/components/custom/custom-select";
+import { Skeleton } from "@/components/ui/skeleton";
 import TransactionForm from "@/modules/transactions/components/transaction-form";
 import TransactionsTable from "@/modules/transactions/components/transactions-table";
 import { useTransactionsListView } from "@/modules/transactions/hooks/use-transactions-list-view";
@@ -158,7 +159,15 @@ export default function TransactionsListView() {
       </div>
 
       {isLoading ? (
-        <p className="text-xiii text-app-text-muted">Loading transactions...</p>
+        <div className="space-y-3 rounded-[--radius-lg] border border-app-border bg-app-card p-5">
+          <Skeleton className="h-5 w-56" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-[92%]" />
+            <Skeleton className="h-4 w-[78%]" />
+          </div>
+        </div>
       ) : (
         <TransactionsTable
           transactions={transactions}

@@ -3,6 +3,7 @@ import { CustomButton } from "@/components/custom/custom-button";
 import { Input } from "@/components/ui/input";
 import { getApiErrorMessage } from "@/lib/get-api-error-message";
 import { useTransactionsImportView } from "@/modules/transactions/hooks/use-transactions-import-view";
+import { useCurrencies } from "@/modules/currencies/hooks/use-currencies";
 
 export default function TransactionsImportView() {
   const {
@@ -21,6 +22,8 @@ export default function TransactionsImportView() {
     downloadSampleFile,
   } = useTransactionsImportView();
 
+  const { currencies, isLoading } = useCurrencies();
+
   return (
     <section className="space-y-6">
       <header className="space-y-1">
@@ -28,8 +31,8 @@ export default function TransactionsImportView() {
           Import transactions
         </h1>
         <p className="text-xiii text-app-text-muted">
-          Upload a CSV file and we&apos;ll process it in the background. You can
-          track progress below.
+          Upload a CSV file and we&apos;ll process it. You can track progress
+          below.
         </p>
       </header>
 
@@ -220,7 +223,7 @@ export default function TransactionsImportView() {
                 </td>
                 <td className="px-3 py-2.5 text-app-text">Yes</td>
                 <td className="px-3 py-2.5 text-app-text-muted">
-                  Transaction value in normal currency units (not minor units).
+                  Transaction value in normal currency units.
                 </td>
                 <td className="px-3 py-2.5 text-app-text-muted">
                   <code>1500.00</code>
@@ -244,8 +247,7 @@ export default function TransactionsImportView() {
                 </td>
                 <td className="px-3 py-2.5 text-app-text">No</td>
                 <td className="px-3 py-2.5 text-app-text-muted">
-                  Optional customer email. If provided, it must match an
-                  existing customer.
+                  It must match an existing customer email.
                 </td>
                 <td className="px-3 py-2.5 text-app-text-muted">
                   <code>billing@acme.com</code>
@@ -296,11 +298,14 @@ export default function TransactionsImportView() {
             (example: <code>income:Consulting</code>).
           </li>
           <li>
-            <strong>currency</strong> must match supported currencies.
+            <strong>currency</strong> must match supported currencies{" "}
+            {!isLoading &&
+              `(${currencies.map((currency) => `${currency.code}`)})`}
+            .
           </li>
           <li>
-            <strong>customerEmail</strong> is optional but must map to an
-            existing customer if provided.
+            <strong>customerEmail</strong> must map to an existing customer if
+            provided.
           </li>
           <li>
             <strong>transactionDate</strong> should be a valid date (ISO format

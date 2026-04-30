@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { CustomButton } from "@/components/custom/custom-button";
 import ConfirmActionDialog from "@/components/custom/confirm-action-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import CustomerForm from "@/modules/customers/components/customer-form";
 import { useCustomerDetailsView } from "@/modules/customers/hooks/use-customer-details-view";
 import { getApiErrorMessage } from "@/lib/get-api-error-message";
@@ -21,9 +22,15 @@ export default function CustomerDetailsView() {
 
   if (isLoading) {
     return (
-      <p className="text-xiii text-app-text-muted">
-        Loading customer details...
-      </p>
+      <section className="space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-3/5" />
+        <div className="space-y-3 rounded-[--radius-lg] border border-app-border bg-app-card p-5">
+          <Skeleton className="h-5 w-full" />
+          <Skeleton className="h-5 w-full" />
+          <Skeleton className="h-5 w-[70%]" />
+        </div>
+      </section>
     );
   }
 

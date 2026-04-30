@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import CustomDatePicker from "@/components/custom/custom-date-picker";
 import CustomSelect from "@/components/custom/custom-select";
 import { CustomButton } from "@/components/custom/custom-button";
+import { Skeleton } from "@/components/ui/skeleton";
 import InvoicesTable from "@/modules/invoices/components/invoices-table";
 import { useInvoicesListView } from "@/modules/invoices/hooks/use-invoices-list-view";
 import {
@@ -87,7 +88,14 @@ export default function InvoicesListView() {
       </div>
 
       {isLoading ? (
-        <p className="text-xiii text-app-text-muted">Loading invoices...</p>
+        <div className="space-y-3 rounded-[--radius-lg] border border-app-border bg-app-card p-5">
+          <Skeleton className="h-5 w-48" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-[92%]" />
+          </div>
+        </div>
       ) : (
         <InvoicesTable invoices={invoices} customers={customers} />
       )}

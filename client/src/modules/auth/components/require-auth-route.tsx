@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { CustomSpinner } from "@/components/custom/custom-spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useSessionStatus } from "@/modules/auth/hooks/use-session-status";
 
 export default function RequireAuthRoute() {
@@ -8,9 +8,11 @@ export default function RequireAuthRoute() {
 
   if (isLoading) {
     return (
-      <section className="flex min-h-screen items-center justify-center gap-2 text-app-text-muted">
-        <CustomSpinner />
-        <p className="text-xiii">Checking your session...</p>
+      <section className="flex min-h-screen items-center justify-center text-app-text-muted">
+        <div className="space-y-3">
+          <Skeleton className="h-6 w-72" />
+          <Skeleton className="h-4 w-48" />
+        </div>
       </section>
     );
   }

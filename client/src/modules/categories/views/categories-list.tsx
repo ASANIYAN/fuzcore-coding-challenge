@@ -1,6 +1,7 @@
 import { CustomButton } from "@/components/custom/custom-button";
 import ConfirmActionDialog from "@/components/custom/confirm-action-dialog";
 import CustomSelect from "@/components/custom/custom-select";
+import { Skeleton } from "@/components/ui/skeleton";
 import CategoriesTable from "@/modules/categories/components/categories-table";
 import CategoryForm from "@/modules/categories/components/category-form";
 import { useCategoriesListView } from "@/modules/categories/hooks/use-categories-list-view";
@@ -90,7 +91,15 @@ export default function CategoriesListView() {
       </div>
 
       {isLoading ? (
-        <p className="text-xiii text-app-text-muted">Loading categories...</p>
+        <div className="space-y-3 rounded-[--radius-lg] border border-app-border bg-app-card p-5">
+          <Skeleton className="h-5 w-48" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-[90%]" />
+            <Skeleton className="h-4 w-[80%]" />
+            <Skeleton className="h-4 w-[95%]" />
+          </div>
+        </div>
       ) : (
         <CategoriesTable
           categories={categories}

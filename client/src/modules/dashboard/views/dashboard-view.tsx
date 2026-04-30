@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import CustomDatePicker from "@/components/custom/custom-date-picker";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboardView } from "@/modules/dashboard/hooks/use-dashboard-view";
 
 export default function DashboardView() {
@@ -38,7 +39,21 @@ export default function DashboardView() {
       </div>
 
       {isLoading || !dashboard ? (
-        <p className="text-xiii text-app-text-muted">Loading dashboard...</p>
+        <div className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-3">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <Skeleton className="h-36 w-full" />
+            <Skeleton className="h-36 w-full" />
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-40 w-full" />
+          </div>
+        </div>
       ) : (
         <>
           <div className="grid gap-3 md:grid-cols-3">

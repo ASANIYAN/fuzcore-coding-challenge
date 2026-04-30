@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { CustomButton } from "@/components/custom/custom-button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getApiErrorMessage } from "@/lib/get-api-error-message";
 import InvoiceForm from "@/modules/invoices/components/invoice-form";
 import { useInvoiceDetailsView } from "@/modules/invoices/hooks/use-invoice-details-view";
@@ -33,7 +34,19 @@ export default function InvoiceDetailsView() {
   } = useInvoiceDetailsView();
 
   if (isLoading) {
-    return <p className="text-xiii text-app-text-muted">Loading invoice...</p>;
+    return (
+      <section className="space-y-6">
+        <div className="space-y-3">
+          <Skeleton className="h-8 w-72" />
+          <Skeleton className="h-4 w-40" />
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <Skeleton className="h-44 w-full" />
+          <Skeleton className="h-44 w-full" />
+        </div>
+        <Skeleton className="h-48 w-full" />
+      </section>
+    );
   }
 
   if (error || !invoice) {

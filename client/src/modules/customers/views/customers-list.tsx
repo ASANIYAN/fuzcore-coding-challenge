@@ -1,6 +1,7 @@
 import { CustomButton } from "@/components/custom/custom-button";
 import CustomInput from "@/components/custom/custom-input";
 import CustomSelect from "@/components/custom/custom-select";
+import { Skeleton } from "@/components/ui/skeleton";
 import ConfirmActionDialog from "@/components/custom/confirm-action-dialog";
 import CustomersTable from "@/modules/customers/components/customers-table";
 import CustomerForm from "@/modules/customers/components/customer-form";
@@ -76,7 +77,15 @@ export default function CustomersListView() {
       </div>
 
       {isLoading ? (
-        <p className="text-xiii text-app-text-muted">Loading customers...</p>
+        <div className="space-y-3 rounded-[--radius-lg] border border-app-border bg-app-card p-5">
+          <Skeleton className="h-5 w-56" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-[90%]" />
+            <Skeleton className="h-4 w-[80%]" />
+          </div>
+        </div>
       ) : (
         <CustomersTable
           customers={customers}

@@ -34,6 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { CustomButton } from "@/components/custom/custom-button";
 
 type DataTableProps<TData, TValue> = {
@@ -78,10 +79,7 @@ function TableSkeleton({
         >
           {Array.from({ length: columns }).map((_, colIdx) => (
             <TableCell key={colIdx} className="px-5 py-3.5">
-              <div
-                className="h-3.5 animate-pulse rounded-[--radius-xs] bg-app-surface"
-                style={{ width: `${55 + Math.random() * 35}%` }}
-              />
+              <Skeleton className="h-3.5 w-full rounded-[--radius-xs]" />
             </TableCell>
           ))}
         </TableRow>
