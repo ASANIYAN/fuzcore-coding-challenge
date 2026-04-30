@@ -1,5 +1,8 @@
 import { Router } from "express";
-import { requireAuth } from "../../middleware/auth.middleware";
+import {
+  requireAuth,
+  requireVerifiedUser,
+} from "../../middleware/auth.middleware";
 import { csvUploadMiddleware } from "../../middleware/csv-upload.middleware";
 import { rateLimit } from "../../middleware/rate-limit.middleware";
 import { validate } from "../../middleware/validate.middleware";
@@ -17,7 +20,11 @@ export const transactionsRouter = Router();
 
 transactionsRouter.get("/import/sample", transactionsController.downloadSampleCsv);
 
-transactionsRouter.use(requireAuth, rateLimit("standard-user-minute"));
+transactionsRouter.use(
+  requireAuth,
+  requireVerifiedUser,
+  rateLimit("standard-user-minute"),
+);
 
 transactionsRouter.get("/", transactionsController.listTransactions);
 transactionsRouter.get("/:id", transactionsController.getTransaction);

@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db } from "../db";
-import { UnauthorizedError } from "../lib/errors";
+import { UnauthorizedError, UserNotVerifiedError } from "../lib/errors";
 import { SESSION_COOKIE_NAME } from "../lib/session";
 import { sessions, users } from "../../shared/schema";
 
@@ -42,6 +42,22 @@ export const optionalAuth = (
   void attachSessionFromRequest(req)
     .then(() => next())
     .catch(next);
+};
+
+export const requireVerifiedUser = (
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+) => {
+  if (!req.user) {
+    return next(new UnauthorizedError());
+  }
+
+  if (!req.user.emailVerifiedAt) {
+    return next(new UserNotVerifiedError());
+  }
+
+  return next();
 };
 
 async function attachSessionFromRequest(req: Request) {
