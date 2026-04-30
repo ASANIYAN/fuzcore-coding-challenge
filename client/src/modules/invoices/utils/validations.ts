@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { amountInputSchema } from "@/lib/amount-input";
 
 const nullableTrimmedString = z
   .string()
@@ -31,7 +32,7 @@ export const listInvoicesQuerySchema = z.object({
 export const invoiceItemFormSchema = z.object({
   description: z.string().trim().min(1, "Description is required"),
   quantity: z.coerce.number().positive("Quantity must be greater than zero"),
-  unitPrice: z.coerce.number().positive("Unit price must be greater than zero"),
+  unitPrice: amountInputSchema("Unit price"),
   sortOrder: z.coerce.number().int().min(0),
 });
 

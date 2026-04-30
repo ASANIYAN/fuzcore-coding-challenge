@@ -4,7 +4,10 @@ import CustomSelect from "@/components/custom/custom-select";
 import { CustomButton } from "@/components/custom/custom-button";
 import InvoicesTable from "@/modules/invoices/components/invoices-table";
 import { useInvoicesListView } from "@/modules/invoices/hooks/use-invoices-list-view";
-import { invoiceStatusOptions, type ListInvoicesQuery } from "@/modules/invoices/utils/validations";
+import {
+  invoiceStatusOptions,
+  type ListInvoicesQuery,
+} from "@/modules/invoices/utils/validations";
 
 export default function InvoicesListView() {
   const {
@@ -26,19 +29,23 @@ export default function InvoicesListView() {
       <header className="flex items-center justify-between gap-3">
         <div className="space-y-1">
           <h1 className="text-xxiv font-semibold text-app-text">Invoices</h1>
-          <p className="text-xiii text-app-text-muted">Create, track, and manage invoice lifecycle.</p>
+          <p className="text-xiii text-app-text-muted">
+            Create, track, and manage invoice lifecycle.
+          </p>
         </div>
-        <Link to="/dashboard/invoices/new" className="text-xiii text-app-primary hover:underline">
+        <Link
+          to="/dashboard/invoices/new"
+          className="text-xiii text-app-text hover:underline"
+        >
           Create invoice
         </Link>
       </header>
 
       <div className="rounded-[--radius-lg] border border-app-border bg-app-card p-5">
-        <h2 className="mb-4 text-xvi font-semibold text-app-text">Filter invoices</h2>
-        <form
-          onSubmit={applyFilters}
-          className="grid gap-4 md:grid-cols-3"
-        >
+        <h2 className="mb-4 text-xvi font-semibold text-app-text">
+          Filter invoices
+        </h2>
+        <form onSubmit={applyFilters} className="grid gap-4 md:grid-cols-3">
           <CustomSelect
             control={filterForm.control}
             name="status"
@@ -59,10 +66,22 @@ export default function InvoicesListView() {
             ]}
             placeholder="All customers"
           />
-          <CustomInput control={filterForm.control} name="from" label="From" type="date" />
-          <CustomInput control={filterForm.control} name="to" label="To" type="date" />
+          <CustomInput
+            control={filterForm.control}
+            name="from"
+            label="From"
+            type="date"
+          />
+          <CustomInput
+            control={filterForm.control}
+            name="to"
+            label="To"
+            type="date"
+          />
           <div className="flex items-end">
-            <CustomButton type="submit" loading={isFetching}>Apply filters</CustomButton>
+            <CustomButton type="submit" loading={isFetching}>
+              Apply filters
+            </CustomButton>
           </div>
         </form>
       </div>
@@ -75,7 +94,8 @@ export default function InvoicesListView() {
 
       <div className="flex items-center justify-between rounded-[--radius-lg] border border-app-border bg-app-card p-4">
         <p className="text-xiii text-app-text-muted">
-          Page {meta.page} of {Math.max(meta.totalPages, 1)} ({meta.total} total)
+          Page {meta.page} of {Math.max(meta.totalPages, 1)} ({meta.total}{" "}
+          total)
         </p>
         <div className="flex gap-2">
           <CustomButton

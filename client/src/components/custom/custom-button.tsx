@@ -14,7 +14,7 @@ const customButtonVariants = cva(
         secondary:
           "border border-app-secondary-border bg-app-secondary !text-app-secondary-text hover:bg-app-secondary-hover hover:shadow-sm",
         danger:
-          "bg-app-danger text-white hover:bg-app-danger-hover hover:shadow-sm",
+          "bg-app-danger !text-white hover:bg-app-danger-hover hover:shadow-sm",
       },
       size: {
         sm: "h-8 px-3 text-xii",

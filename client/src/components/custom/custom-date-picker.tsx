@@ -8,8 +8,17 @@ import {
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field";
 
 interface CustomDatePickerProps<T extends FieldValues> {
   control: Control<T>;
@@ -51,7 +60,9 @@ export function CustomDatePicker<T extends FieldValues>({
         const hasError = !!error || !!fieldError;
         const parsedDate = value ? new Date(value as string) : undefined;
         const selectedDate =
-          parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : undefined;
+          parsedDate && !Number.isNaN(parsedDate.getTime())
+            ? parsedDate
+            : undefined;
 
         const validationMessages = fieldError?.types
           ? Object.values(fieldError.types).flatMap((message) =>
@@ -62,7 +73,10 @@ export function CustomDatePicker<T extends FieldValues>({
         return (
           <Field data-invalid={hasError} className={cn(containerClassName)}>
             {label ? (
-              <FieldLabel htmlFor={name} className={cn("text-xiii text-app-text", labelClassName)}>
+              <FieldLabel
+                htmlFor={name}
+                className={cn("text-xiii text-app-text", labelClassName)}
+              >
                 {label}
               </FieldLabel>
             ) : null}
@@ -74,7 +88,7 @@ export function CustomDatePicker<T extends FieldValues>({
                 disabled={disabled}
                 aria-invalid={hasError}
                 className={cn(
-                  "flex h-12 w-full items-center justify-between rounded-[--radius-lg] border border-app-border bg-app-card px-4 text-left text-xiv text-app-text transition-colors focus-visible:border-app-primary",
+                  "flex h-12 w-full items-center justify-between rounded-[--radius-lg] border border-app-border bg-app-card px-4 text-left text-xiv text-app-text transition-opacity duration-fast focus-visible:border-app-primary hover:opacity-90",
                   !selectedDate && "text-app-text-subtle",
                   hasError && "border-app-danger",
                   buttonClassName,
@@ -83,9 +97,12 @@ export function CustomDatePicker<T extends FieldValues>({
                 <span className="truncate">
                   {selectedDate ? format(selectedDate, "PPP") : placeholder}
                 </span>
-                <CalendarIcon className="size-4 text-app-text-muted" />
+                <CalendarIcon className="size-4 text-app-text/70" />
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent
+                className="w-auto border-app-border bg-app-card p-0 text-app-text shadow-dropdown"
+                align="start"
+              >
                 <Calendar
                   mode="single"
                   selected={selectedDate}
@@ -101,7 +118,9 @@ export function CustomDatePicker<T extends FieldValues>({
             </Popover>
 
             {description ? (
-              <FieldDescription className="text-xii text-app-text-muted">{description}</FieldDescription>
+              <FieldDescription className="text-xii text-app-text-muted">
+                {description}
+              </FieldDescription>
             ) : null}
 
             {hasError ? (

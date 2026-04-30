@@ -26,9 +26,15 @@ export default function TransactionsTable({
   onEdit,
   onDelete,
 }: TransactionsTableProps) {
-  const categoryMap = new Map(categories.map((category) => [category.id, category]));
-  const customerMap = new Map(customers.map((customer) => [customer.id, customer]));
-  const currencyMap = new Map(currencies.map((currency) => [currency.code, currency]));
+  const categoryMap = new Map(
+    categories.map((category) => [category.id, category]),
+  );
+  const customerMap = new Map(
+    customers.map((customer) => [customer.id, customer]),
+  );
+  const currencyMap = new Map(
+    currencies.map((currency) => [currency.code, currency]),
+  );
 
   const columns: ColumnDef<Transaction>[] = [
     {
@@ -43,12 +49,15 @@ export default function TransactionsTable({
     {
       accessorKey: "type",
       header: "Type",
-      cell: ({ row }) => <span className="capitalize">{row.original.type}</span>,
+      cell: ({ row }) => (
+        <span className="capitalize">{row.original.type}</span>
+      ),
     },
     {
       accessorKey: "categoryId",
       header: "Category",
-      cell: ({ row }) => categoryMap.get(row.original.categoryId)?.name ?? "Unknown",
+      cell: ({ row }) =>
+        categoryMap.get(row.original.categoryId)?.name ?? "Unknown",
     },
     {
       accessorKey: "customerId",
@@ -57,7 +66,11 @@ export default function TransactionsTable({
         const customer = row.original.customerId
           ? customerMap.get(row.original.customerId)
           : null;
-        return <span className="text-app-text-muted">{customer?.displayName ?? "-"}</span>;
+        return (
+          <span className="text-app-text-muted">
+            {customer?.displayName ?? "-"}
+          </span>
+        );
       },
     },
     {
@@ -65,16 +78,23 @@ export default function TransactionsTable({
       header: "Amount",
       cell: ({ row }) => {
         const currency = currencyMap.get(row.original.currency);
-        return `${currency?.symbol ?? ""}${row.original.amount.toLocaleString(undefined, {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}`;
+        return `${currency?.symbol ?? ""}${row.original.amount.toLocaleString(
+          undefined,
+          {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          },
+        )}`;
       },
     },
     {
       accessorKey: "reference",
       header: "Reference",
-      cell: ({ row }) => <span className="text-app-text-muted">{row.original.reference ?? "-"}</span>,
+      cell: ({ row }) => (
+        <span className="text-app-text-muted">
+          {row.original.reference ?? "-"}
+        </span>
+      ),
     },
     {
       id: "actions",

@@ -19,13 +19,11 @@ const Toaster = ({ ...props }: ToasterProps) => {
           description: "text-xii text-app-text-muted",
           success:
             "!border-app-success-border !bg-app-success-dim !text-app-success",
-          error:
-            "!border-app-danger !bg-app-danger !text-white",
+          error: "!border-app-danger !bg-app-danger !text-white",
           warning:
             "!border-app-warning-border !bg-app-warning-dim !text-app-warning",
           info: "!border-app-info-border !bg-app-info-dim !text-app-info-text",
-          actionButton:
-            "bg-app-primary text-white hover:bg-app-primary-hover",
+          actionButton: "bg-app-primary text-white hover:bg-app-primary-hover",
           cancelButton:
             "border border-app-secondary-border bg-app-secondary text-app-secondary-text hover:bg-app-secondary-hover",
         },

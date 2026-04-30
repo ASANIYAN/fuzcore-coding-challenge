@@ -33,7 +33,7 @@ export default function SignupView() {
             Already have an account?{" "}
             <Link
               to="/login"
-              className="text-app-primary transition-colors hover:text-app-primary-hover"
+              className="text-app-text transition-colors hover:text-app-text-hover"
             >
               Sign in
             </Link>

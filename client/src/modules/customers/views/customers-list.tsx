@@ -39,16 +39,21 @@ export default function CustomersListView() {
       </header>
 
       <div className="rounded-[--radius-lg] border border-app-border bg-app-card p-5">
-        <h2 className="mb-4 text-xvi font-semibold text-app-text">Create customer</h2>
-        <CustomerForm mode="create" isSubmitting={isCreating} onSubmit={create} />
+        <h2 className="mb-4 text-xvi font-semibold text-app-text">
+          Create customer
+        </h2>
+        <CustomerForm
+          mode="create"
+          isSubmitting={isCreating}
+          onSubmit={create}
+        />
       </div>
 
       <div className="rounded-[--radius-lg] border border-app-border bg-app-card p-5">
-        <h2 className="mb-4 text-xvi font-semibold text-app-text">Filter customers</h2>
-        <form
-          onSubmit={applyFilters}
-          className="grid gap-4 md:grid-cols-3"
-        >
+        <h2 className="mb-4 text-xvi font-semibold text-app-text">
+          Filter customers
+        </h2>
+        <form onSubmit={applyFilters} className="grid gap-4 md:grid-cols-3">
           <CustomInput
             control={filterForm.control}
             name="search"
@@ -59,11 +64,13 @@ export default function CustomersListView() {
             control={filterForm.control}
             name="type"
             label="Type"
-            options={[{ value: "", label: "All" }, ...customerTypeOptions]}
+            options={[{ value: "all", label: "All" }, ...customerTypeOptions]}
             placeholder="All"
           />
           <div className="flex items-end">
-            <CustomButton type="submit" loading={isFetching}>Apply filters</CustomButton>
+            <CustomButton type="submit" loading={isFetching}>
+              Apply filters
+            </CustomButton>
           </div>
         </form>
       </div>
@@ -80,7 +87,8 @@ export default function CustomersListView() {
 
       <div className="flex items-center justify-between rounded-[--radius-lg] border border-app-border bg-app-card p-4">
         <p className="text-xiii text-app-text-muted">
-          Page {meta.page} of {Math.max(meta.totalPages, 1)} ({meta.total} total)
+          Page {meta.page} of {Math.max(meta.totalPages, 1)} ({meta.total}{" "}
+          total)
         </p>
         <div className="flex gap-2">
           <CustomButton

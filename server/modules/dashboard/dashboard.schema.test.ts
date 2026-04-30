@@ -17,3 +17,12 @@ test("dashboardQuerySchema parses valid date range", () => {
   assert.equal(parsed.from instanceof Date, true);
   assert.equal(parsed.to instanceof Date, true);
 });
+
+test("dashboardQuerySchema rejects inverted date range", () => {
+  const result = dashboardQuerySchema.safeParse({
+    from: "2026-02-01T00:00:00.000Z",
+    to: "2026-01-01T00:00:00.000Z",
+  });
+
+  assert.equal(result.success, false);
+});

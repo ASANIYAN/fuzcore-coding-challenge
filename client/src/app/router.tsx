@@ -51,7 +51,9 @@ export const routes: RouteObject[] = [
     element: <App />,
     errorElement: (
       <section className="mx-auto flex min-h-screen w-full max-w-lg flex-col items-center justify-center gap-3 px-6 text-center">
-        <h1 className="text-xxiv font-semibold text-app-text">Something went wrong</h1>
+        <h1 className="text-xxiv font-semibold text-app-text">
+          Something went wrong
+        </h1>
         <p className="text-xiii text-app-text-muted">
           We ran into an issue loading this page. Please refresh and try again.
         </p>
@@ -70,7 +72,9 @@ export const routes: RouteObject[] = [
         path: "*",
         element: (
           <section className="mx-auto flex min-h-screen w-full max-w-lg flex-col items-center justify-center gap-3 px-6 text-center">
-            <h1 className="text-xxiv font-semibold text-app-text">Page not found</h1>
+            <h1 className="text-xxiv font-semibold text-app-text">
+              Page not found
+            </h1>
             <p className="text-xiii text-app-text-muted">
               The page you are looking for does not exist or may have moved.
             </p>

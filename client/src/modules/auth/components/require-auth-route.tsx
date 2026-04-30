@@ -18,7 +18,9 @@ export default function RequireAuthRoute() {
   if (isError) {
     return (
       <section className="mx-auto flex min-h-screen w-full max-w-lg flex-col items-center justify-center gap-3 px-6 text-center">
-        <h1 className="text-xxiv font-semibold text-app-text">We couldn&apos;t verify your session</h1>
+        <h1 className="text-xxiv font-semibold text-app-text">
+          We couldn&apos;t verify your session
+        </h1>
         <p className="text-xiii text-app-text-muted">
           Please refresh the page and try again.
         </p>

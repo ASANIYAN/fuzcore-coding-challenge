@@ -11,7 +11,7 @@ import { getApiErrorMessage } from "@/lib/get-api-error-message";
 export function useCustomersListView() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [type, setType] = useState<"person" | "company" | "">("");
+  const [type, setType] = useState<"person" | "company" | undefined>(undefined);
   const [deletingCustomerId, setDeletingCustomerId] = useState<string | null>(null);
   const [pendingDeleteCustomerId, setPendingDeleteCustomerId] = useState<string | null>(null);
 
@@ -20,7 +20,7 @@ export function useCustomersListView() {
       page,
       limit: 20,
       search: search.trim() || undefined,
-      type: type || undefined,
+      type,
     }),
     [page, search, type],
   );
@@ -28,7 +28,7 @@ export function useCustomersListView() {
   const filterForm = useForm({
     defaultValues: {
       search: "",
-      type: "",
+      type: "all",
     },
   });
 
@@ -39,7 +39,11 @@ export function useCustomersListView() {
   const applyFilters = filterForm.handleSubmit((values) => {
     setPage(1);
     setSearch(values.search ?? "");
-    setType((values.type as "person" | "company" | "") ?? "");
+    setType(
+      values.type === "all"
+        ? undefined
+        : (values.type as "person" | "company"),
+    );
   });
 
   const create = async (payload: Parameters<typeof createCustomer>[0]) => {

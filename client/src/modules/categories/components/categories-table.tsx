@@ -27,7 +27,9 @@ export default function CategoriesTable({
       accessorKey: "type",
       header: "Type",
       cell: ({ row }) => (
-        <span className="capitalize text-app-text-muted">{row.original.type}</span>
+        <span className="capitalize text-app-text-muted">
+          {row.original.type}
+        </span>
       ),
     },
     {

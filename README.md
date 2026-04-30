@@ -53,3 +53,4 @@ shared/        # Shared types and schema
 See `.env.example` for reference. When using `npm run docker:dev` these are set automatically via `docker-compose.yml`.
 
 - `HOST`: defaults to `127.0.0.1` for local runs; Docker sets `0.0.0.0` so the app is reachable from the host machine.
+- `VITE_ALLOWED_HOSTS`: comma-separated host allowlist for the Vite dev server. Defaults to `localhost,127.0.0.1`; add your exact ngrok or LAN hostname when needed.

@@ -20,16 +20,26 @@ export default function CustomerDetailsView() {
   } = useCustomerDetailsView();
 
   if (isLoading) {
-    return <p className="text-xiii text-app-text-muted">Loading customer details...</p>;
+    return (
+      <p className="text-xiii text-app-text-muted">
+        Loading customer details...
+      </p>
+    );
   }
 
   if (error || !customer) {
     return (
       <section className="space-y-4">
         <p className="text-xiii text-app-danger">
-          {getApiErrorMessage(error, "We could not load this customer right now.")}
+          {getApiErrorMessage(
+            error,
+            "We could not load this customer right now.",
+          )}
         </p>
-        <Link className="text-xiii text-app-primary hover:underline" to="/dashboard/customers">
+        <Link
+          className="text-xiii text-app-text hover:underline"
+          to="/dashboard/customers"
+        >
           Back to customers
         </Link>
       </section>
@@ -63,7 +73,10 @@ export default function CustomerDetailsView() {
         >
           Delete customer
         </CustomButton>
-        <Link className="text-xiii text-app-primary hover:underline" to="/dashboard/customers">
+        <Link
+          className="text-xiii text-app-text hover:underline"
+          to="/dashboard/customers"
+        >
           Back to customers
         </Link>
       </div>

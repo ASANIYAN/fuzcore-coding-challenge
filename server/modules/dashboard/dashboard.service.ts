@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { db } from "../../db";
-import { toDecimal } from "../../lib/currency";
+import { isSupportedCurrency, toDecimal } from "../../lib/currency";
 import { invoices, transactions } from "../../../shared/schema";
 import type { DashboardQuery } from "./dashboard.schema";
 
@@ -22,10 +22,39 @@ function endOfMonth(date: Date) {
 
 type MonetaryGroup = { currency: string; amount: bigint };
 
+function parseMinorAmount(value: string | number | bigint): bigint {
+  if (typeof value === "bigint") {
+    return value;
+  }
+
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      return BigInt(0);
+    }
+    return BigInt(Math.round(value));
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return BigInt(0);
+  }
+
+  if (/^-?\d+$/.test(trimmed)) {
+    return BigInt(trimmed);
+  }
+
+  const parsed = Number(trimmed);
+  if (Number.isFinite(parsed)) {
+    return BigInt(Math.round(parsed));
+  }
+
+  return BigInt(0);
+}
+
 function groupToMonetaryMap(rows: Array<{ currency: string; amount: string | number | bigint }>) {
   return rows.map((row) => ({
     currency: row.currency,
-    amount: BigInt(row.amount),
+    amount: parseMinorAmount(row.amount),
   }));
 }
 
@@ -44,6 +73,17 @@ function subtractGroupedAmounts(revenue: MonetaryGroup[], expenses: MonetaryGrou
   }));
 }
 
+function toDashboardAmount(currency: string, amount: bigint): number | null {
+  if (!isSupportedCurrency(currency)) {
+    return null;
+  }
+  return toDecimal(amount, currency);
+}
+
+function isNotNull<T>(value: T | null): value is T {
+  return value !== null;
+}
+
 export class DashboardService {
   private readonly db: Db;
 
@@ -60,6 +100,10 @@ export class DashboardService {
       eq(transactions.userId, userId),
       gte(transactions.transactionDate, from),
       lte(transactions.transactionDate, to),
+    );
+
+    const safeInvoiceItemsTotalSql = sql.raw(
+      `(select coalesce(sum(((case when trim(coalesce(item.quantity, '')) ~ '^-?[0-9]+(\\.[0-9]+)?$' then item.quantity::numeric else 0 end) * coalesce(item.unit_price, 0)::numeric)::bigint), 0) from invoice_items item where item.invoice_id = invoices.id)`,
     );
 
     const [revenueRows, expenseRows, outstandingRows, overdueRows, recentTransactions, recentInvoices] =
@@ -83,9 +127,7 @@ export class DashboardService {
         this.db
           .select({
             currency: invoices.currency,
-            amount: sql<string>`coalesce(sum(${sql.raw(
-              `(select coalesce(sum((item.quantity::numeric * item.unit_price::numeric)::bigint), 0) from invoice_items item where item.invoice_id = invoices.id)`,
-            )}), 0)`,
+            amount: sql<string>`coalesce(sum(${safeInvoiceItemsTotalSql}), 0)`,
             invoiceCount: sql<number>`count(*)`,
           })
           .from(invoices)
@@ -100,9 +142,7 @@ export class DashboardService {
         this.db
           .select({
             currency: invoices.currency,
-            amount: sql<string>`coalesce(sum(${sql.raw(
-              `(select coalesce(sum((item.quantity::numeric * item.unit_price::numeric)::bigint), 0) from invoice_items item where item.invoice_id = invoices.id)`,
-            )}), 0)`,
+            amount: sql<string>`coalesce(sum(${safeInvoiceItemsTotalSql}), 0)`,
             invoiceCount: sql<number>`count(*)`,
           })
           .from(invoices)
@@ -137,33 +177,57 @@ export class DashboardService {
         from: from.toISOString(),
         to: to.toISOString(),
       },
-      revenue: revenue.map((item) => ({
-        currency: item.currency,
-        amount: toDecimal(item.amount, item.currency),
-      })),
-      expenses: expenses.map((item) => ({
-        currency: item.currency,
-        amount: toDecimal(item.amount, item.currency),
-      })),
-      net: net.map((item) => ({
-        currency: item.currency,
-        amount: toDecimal(item.amount, item.currency),
-      })),
-      outstanding: outstandingRows.map((row) => ({
-        currency: row.currency,
-        amount: toDecimal(BigInt(row.amount), row.currency),
-        invoiceCount: Number(row.invoiceCount),
-      })),
-      overdue: overdueRows.map((row) => ({
-        currency: row.currency,
-        amount: toDecimal(BigInt(row.amount), row.currency),
-        invoiceCount: Number(row.invoiceCount),
-      })),
-      recentTransactions: recentTransactions.map((item) => ({
-        ...item,
-        importHash: undefined,
-        amount: toDecimal(item.amount, item.currency),
-      })),
+      revenue: revenue
+        .map((item) => ({
+          currency: item.currency,
+          amount: toDashboardAmount(item.currency, item.amount),
+        }))
+        .filter((item): item is { currency: string; amount: number } => item.amount !== null),
+      expenses: expenses
+        .map((item) => ({
+          currency: item.currency,
+          amount: toDashboardAmount(item.currency, item.amount),
+        }))
+        .filter((item): item is { currency: string; amount: number } => item.amount !== null),
+      net: net
+        .map((item) => ({
+          currency: item.currency,
+          amount: toDashboardAmount(item.currency, item.amount),
+        }))
+        .filter((item): item is { currency: string; amount: number } => item.amount !== null),
+      outstanding: outstandingRows
+        .map((row) => ({
+          currency: row.currency,
+          amount: toDashboardAmount(row.currency, parseMinorAmount(row.amount)),
+          invoiceCount: Number(row.invoiceCount),
+        }))
+        .filter(
+          (row): row is { currency: string; amount: number; invoiceCount: number } =>
+            row.amount !== null,
+        ),
+      overdue: overdueRows
+        .map((row) => ({
+          currency: row.currency,
+          amount: toDashboardAmount(row.currency, parseMinorAmount(row.amount)),
+          invoiceCount: Number(row.invoiceCount),
+        }))
+        .filter(
+          (row): row is { currency: string; amount: number; invoiceCount: number } =>
+            row.amount !== null,
+        ),
+      recentTransactions: recentTransactions
+        .map((item) => {
+          const amount = toDashboardAmount(item.currency, item.amount);
+          if (amount === null) {
+            return null;
+          }
+          const { importHash: _importHash, ...rest } = item;
+          return {
+            ...rest,
+            amount,
+          };
+        })
+        .filter(isNotNull),
       recentInvoices,
     };
   }

@@ -1,4 +1,3 @@
-import { cn } from "@/lib/utils";
 import {
   type Control,
   Controller,
@@ -11,9 +10,14 @@ import {
   FieldError,
   FieldLabel,
 } from "@/components/ui/field";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import {
+  formatAmountInput,
+  normalizeAmountInput,
+} from "@/lib/amount-input";
 
-interface CustomTextareaProps<T extends FieldValues> {
+interface CustomAmountInputProps<T extends FieldValues> {
   control: Control<T>;
   name: Path<T>;
   label?: string;
@@ -21,14 +25,13 @@ interface CustomTextareaProps<T extends FieldValues> {
   disabled?: boolean;
   containerClassName?: string;
   labelClassName?: string;
-  textareaClassName?: string;
+  inputClassName?: string;
   errorClassName?: string;
   description?: string;
   error?: string;
-  rows?: number;
 }
 
-export function CustomTextarea<T extends FieldValues>({
+export default function CustomAmountInput<T extends FieldValues>({
   control,
   name,
   label,
@@ -36,22 +39,17 @@ export function CustomTextarea<T extends FieldValues>({
   disabled = false,
   containerClassName,
   labelClassName,
-  textareaClassName,
+  inputClassName,
   errorClassName,
   description,
   error,
-  rows,
-}: CustomTextareaProps<T>) {
+}: CustomAmountInputProps<T>) {
   return (
     <Controller
       control={control}
       name={name}
-      render={({
-        field: { onChange, onBlur, value, ref },
-        fieldState: { error: fieldError },
-      }) => {
+      render={({ field, fieldState: { error: fieldError } }) => {
         const hasError = !!error || !!fieldError;
-
         const validationMessages = fieldError?.types
           ? Object.values(fieldError.types).flatMap((message) =>
               typeof message === "string" ? [{ message }] : [],
@@ -69,22 +67,32 @@ export function CustomTextarea<T extends FieldValues>({
               </FieldLabel>
             ) : null}
 
-            <Textarea
-              ref={ref}
-              id={name}
-              value={value ?? ""}
-              onChange={onChange}
-              onBlur={onBlur}
-              placeholder={placeholder}
-              disabled={disabled}
-              rows={rows}
-              aria-invalid={hasError}
+            <div
               className={cn(
-                "min-h-0 rounded-[--radius-lg] border border-app-border bg-app-card px-4 py-3 text-xiv text-app-text placeholder:text-app-text-subtle focus-visible:border-app-primary focus-visible:ring-0",
+                "flex items-center rounded-[--radius-lg] border border-app-border bg-app-card px-4 py-3 transition-colors focus-within:border-app-primary",
                 hasError && "border-app-danger",
-                textareaClassName,
               )}
-            />
+            >
+              <Input
+                ref={field.ref}
+                id={name}
+                type="text"
+                value={formatAmountInput(field.value as string | number | null)}
+                onChange={(event) => {
+                  field.onChange(normalizeAmountInput(event.target.value));
+                }}
+                onBlur={field.onBlur}
+                placeholder={placeholder}
+                disabled={disabled}
+                inputMode="decimal"
+                autoComplete="off"
+                aria-invalid={hasError}
+                className={cn(
+                  "h-auto border-0 bg-transparent p-0 text-xiv text-app-text placeholder:text-app-text-subtle shadow-none focus-visible:ring-0",
+                  inputClassName,
+                )}
+              />
+            </div>
 
             {description ? (
               <FieldDescription className="text-xii text-app-text-muted">
@@ -108,5 +116,3 @@ export function CustomTextarea<T extends FieldValues>({
     />
   );
 }
-
-export default CustomTextarea;

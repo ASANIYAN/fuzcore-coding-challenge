@@ -42,7 +42,10 @@ export default function InvoiceDetailsView() {
         <p className="text-xiii text-app-danger">
           {getApiErrorMessage(error, "Unable to load invoice")}
         </p>
-        <Link to="/dashboard/invoices" className="text-xiii text-app-primary hover:underline">
+        <Link
+          to="/dashboard/invoices"
+          className="text-xiii text-app-text hover:underline"
+        >
           Back to invoices
         </Link>
       </section>
@@ -53,7 +56,9 @@ export default function InvoiceDetailsView() {
     <section className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xxiv font-semibold text-app-text">Invoice #{invoice.invoiceNumber}</h1>
+          <h1 className="text-xxiv font-semibold text-app-text">
+            Invoice #{invoice.invoiceNumber}
+          </h1>
           <div className="mt-1 flex items-center gap-2">
             <p className="text-xiii text-app-text-muted">{statusText}</p>
             <Badge
@@ -64,7 +69,10 @@ export default function InvoiceDetailsView() {
             </Badge>
           </div>
         </div>
-        <Link to="/dashboard/invoices" className="text-xiii text-app-primary hover:underline">
+        <Link
+          to="/dashboard/invoices"
+          className="text-xiii text-app-text hover:underline"
+        >
           Back to invoices
         </Link>
       </header>
@@ -136,7 +144,7 @@ export default function InvoiceDetailsView() {
             href={invoice.paymentLink}
             target="_blank"
             rel="noreferrer"
-            className="break-all text-xiii text-app-primary hover:underline"
+            className="break-all text-xiii text-app-text hover:underline"
           >
             {invoice.paymentLink}
           </a>
@@ -145,7 +153,9 @@ export default function InvoiceDetailsView() {
 
       {canEdit ? (
         <div className="rounded-[--radius-lg] border border-app-border bg-app-card p-5">
-          <h2 className="mb-4 text-xvi font-semibold text-app-text">Edit draft invoice</h2>
+          <h2 className="mb-4 text-xvi font-semibold text-app-text">
+            Edit draft invoice
+          </h2>
           <InvoiceForm
             mode="edit"
             initialValue={invoice}
@@ -157,11 +167,20 @@ export default function InvoiceDetailsView() {
         </div>
       ) : (
         <div className="rounded-[--radius-lg] border border-app-border bg-app-card p-5">
-          <h2 className="mb-3 text-xvi font-semibold text-app-text">Invoice summary</h2>
+          <h2 className="mb-3 text-xvi font-semibold text-app-text">
+            Invoice summary
+          </h2>
           <div className="grid gap-1 text-xiii text-app-text-muted">
-            <p>Subtotal: {invoice.currency} {invoice.subtotal.toFixed(2)}</p>
-            <p>Tax ({invoice.taxRate ?? 0}%): {invoice.currency} {invoice.taxAmount.toFixed(2)}</p>
-            <p className="font-medium text-app-text">Total: {invoice.currency} {invoice.total.toFixed(2)}</p>
+            <p>
+              Subtotal: {invoice.currency} {invoice.subtotal.toFixed(2)}
+            </p>
+            <p>
+              Tax ({invoice.taxRate ?? 0}%): {invoice.currency}{" "}
+              {invoice.taxAmount.toFixed(2)}
+            </p>
+            <p className="font-medium text-app-text">
+              Total: {invoice.currency} {invoice.total.toFixed(2)}
+            </p>
           </div>
           <div className="mt-4 overflow-x-auto rounded-[--radius-md] border border-app-border">
             <table className="w-full min-w-[680px] text-left text-xiii">
@@ -179,8 +198,12 @@ export default function InvoiceDetailsView() {
                   const lineTotal = quantity * item.unitPrice;
                   return (
                     <tr key={item.id}>
-                      <td className="px-4 py-2.5 text-app-text">{item.description}</td>
-                      <td className="px-4 py-2.5 text-app-text-muted">{quantity}</td>
+                      <td className="px-4 py-2.5 text-app-text">
+                        {item.description}
+                      </td>
+                      <td className="px-4 py-2.5 text-app-text-muted">
+                        {quantity}
+                      </td>
                       <td className="px-4 py-2.5 text-app-text-muted">
                         {invoice.currency} {item.unitPrice.toFixed(2)}
                       </td>

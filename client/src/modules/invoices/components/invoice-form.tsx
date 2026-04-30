@@ -1,15 +1,21 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
+import CustomAmountInput from "@/components/custom/custom-amount-input";
 import { CustomButton } from "@/components/custom/custom-button";
 import CustomInput from "@/components/custom/custom-input";
 import CustomSelect from "@/components/custom/custom-select";
 import { applyApiFormErrors } from "@/lib/apply-api-form-errors";
+import { parseAmountInput } from "@/lib/amount-input";
 import { getApiErrorMessage } from "@/lib/get-api-error-message";
 import type { Customer } from "@/modules/customers/types";
 import type { CurrencyItem } from "@/modules/currencies/hooks/use-currencies";
 import type { Invoice } from "@/modules/invoices/types";
-import { invoiceFormSchema, type CreateInvoicePayload, type InvoiceFormValues } from "@/modules/invoices/utils/validations";
+import {
+  invoiceFormSchema,
+  type CreateInvoicePayload,
+  type InvoiceFormValues,
+} from "@/modules/invoices/utils/validations";
 
 type InvoiceFormProps = {
   mode: "create" | "edit";
@@ -50,7 +56,7 @@ export default function InvoiceForm({
         {
           description: "",
           quantity: 1,
-          unitPrice: 0,
+          unitPrice: "",
           sortOrder: 0,
         },
       ],
@@ -77,7 +83,7 @@ export default function InvoiceForm({
       items: initialValue.items.map((item, index) => ({
         description: item.description,
         quantity: Number(item.quantity),
-        unitPrice: item.unitPrice,
+        unitPrice: String(item.unitPrice),
         sortOrder: index,
       })),
     });
@@ -89,8 +95,8 @@ export default function InvoiceForm({
   const totals = useMemo(() => {
     const subtotal = (watchedItems ?? []).reduce((sum, item) => {
       const quantity = Number(item?.quantity ?? 0);
-      const unitPrice = Number(item?.unitPrice ?? 0);
-      return sum + quantity * unitPrice;
+      const unitPrice = parseAmountInput(item?.unitPrice ?? 0);
+      return sum + quantity * (Number.isFinite(unitPrice) ? unitPrice : 0);
     }, 0);
     const taxAmount = subtotal * (Math.max(watchedTaxRate, 0) / 100);
     const total = subtotal + taxAmount;
@@ -117,7 +123,11 @@ export default function InvoiceForm({
 
       await onSubmit(payload);
     } catch (error) {
-      applyApiFormErrors(form, error, getApiErrorMessage(error, "Unable to save invoice"));
+      applyApiFormErrors(
+        form,
+        error,
+        getApiErrorMessage(error, "Unable to save invoice"),
+      );
     }
   });
 
@@ -144,21 +154,48 @@ export default function InvoiceForm({
           }))}
           placeholder="Select currency"
           disabled={mode === "edit"}
-          description={mode === "edit" ? "Currency cannot be changed for existing invoices." : undefined}
+          description={
+            mode === "edit"
+              ? "Currency cannot be changed for existing invoices."
+              : undefined
+          }
         />
-        <CustomInput control={form.control} name="taxRate" label="Tax rate (%)" type="number" placeholder="7.5" />
+        <CustomInput
+          control={form.control}
+          name="taxRate"
+          label="Tax rate (%)"
+          type="number"
+          placeholder="7.5"
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <CustomInput control={form.control} name="issueDate" label="Issue date" type="date" />
-        <CustomInput control={form.control} name="dueDate" label="Due date" type="date" />
+        <CustomInput
+          control={form.control}
+          name="issueDate"
+          label="Issue date"
+          type="date"
+        />
+        <CustomInput
+          control={form.control}
+          name="dueDate"
+          label="Due date"
+          type="date"
+        />
       </div>
 
-      <CustomInput control={form.control} name="notes" label="Notes" placeholder="Thank you for your business." />
+      <CustomInput
+        control={form.control}
+        name="notes"
+        label="Notes"
+        placeholder="Thank you for your business."
+      />
 
       <div className="space-y-3 rounded-[--radius-lg] border border-app-border bg-app-surface p-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-xiv font-semibold text-app-text">Invoice items</h3>
+          <h3 className="text-xiv font-semibold text-app-text">
+            Invoice items
+          </h3>
           <CustomButton
             type="button"
             variant="secondary"
@@ -167,7 +204,7 @@ export default function InvoiceForm({
               append({
                 description: "",
                 quantity: 1,
-                unitPrice: 0,
+                unitPrice: "",
                 sortOrder: fields.length,
               })
             }
@@ -196,11 +233,10 @@ export default function InvoiceForm({
               />
             </div>
             <div className="md:col-span-3">
-              <CustomInput
+              <CustomAmountInput
                 control={form.control}
                 name={`items.${index}.unitPrice`}
                 label="Unit price"
-                type="number"
                 placeholder="500"
               />
             </div>
@@ -220,19 +256,28 @@ export default function InvoiceForm({
       </div>
 
       <div className="rounded-[--radius-lg] border border-app-border bg-app-card p-4">
-        <h3 className="mb-2 text-xiv font-semibold text-app-text">Totals preview</h3>
+        <h3 className="mb-2 text-xiv font-semibold text-app-text">
+          Totals preview
+        </h3>
         <div className="grid gap-1 text-xiii text-app-text-muted">
           <p>Subtotal: {totals.subtotal.toFixed(2)}</p>
           <p>Tax: {totals.taxAmount.toFixed(2)}</p>
-          <p className="font-medium text-app-text">Total: {totals.total.toFixed(2)}</p>
+          <p className="font-medium text-app-text">
+            Total: {totals.total.toFixed(2)}
+          </p>
         </div>
       </div>
 
       {form.formState.errors.root?.message ? (
-        <p className="text-xii text-app-danger">{form.formState.errors.root.message}</p>
+        <p className="text-xii text-app-danger">
+          {form.formState.errors.root.message}
+        </p>
       ) : null}
 
-      <CustomButton type="submit" loading={isSubmitting || form.formState.isSubmitting}>
+      <CustomButton
+        type="submit"
+        loading={isSubmitting || form.formState.isSubmitting}
+      >
         {mode === "create" ? "Create invoice" : "Save invoice"}
       </CustomButton>
     </form>

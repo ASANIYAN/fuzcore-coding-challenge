@@ -55,8 +55,8 @@ type DataTableProps<TData, TValue> = {
 };
 
 function SortIcon({ sorted }: { sorted: false | "asc" | "desc" }) {
-  if (sorted === "asc") return <ArrowUp className="size-3 text-app-primary" />;
-  if (sorted === "desc") return <ArrowDown className="size-3 text-app-primary" />;
+  if (sorted === "asc") return <ArrowUp className="size-3 text-app-text" />;
+  if (sorted === "desc") return <ArrowDown className="size-3 text-app-text" />;
   return (
     <ArrowUpDown className="size-3 text-app-text-subtle opacity-0 transition-opacity group-hover/head:opacity-100" />
   );
@@ -130,7 +130,9 @@ function DataTablePagination<TData>({
         </CustomButton>
 
         <span className="min-w-16 select-none px-2 text-center text-xii tabular-nums text-app-text-muted">
-          {table.getPageCount() === 0 ? "-" : `${pageIndex + 1} / ${table.getPageCount()}`}
+          {table.getPageCount() === 0
+            ? "-"
+            : `${pageIndex + 1} / ${table.getPageCount()}`}
         </span>
 
         <CustomButton
@@ -177,12 +179,16 @@ export function DataTable<TData, TValue>({
   highlightOnClick = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    [],
+  );
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
   const [activeRowId, setActiveRowId] = React.useState<string | null>(null);
 
-  const resolvedColumnVisibility = controlledColumnVisibility ?? columnVisibility;
+  const resolvedColumnVisibility =
+    controlledColumnVisibility ?? columnVisibility;
 
   React.useEffect(() => {
     if (controlledColumnVisibility) {
@@ -201,7 +207,10 @@ export function DataTable<TData, TValue>({
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: onColumnVisibilityChange
       ? (updaterOrValue) => {
-          const newState = functionalUpdate(updaterOrValue, resolvedColumnVisibility);
+          const newState = functionalUpdate(
+            updaterOrValue,
+            resolvedColumnVisibility,
+          );
           onColumnVisibilityChange(newState);
         }
       : setColumnVisibility,
@@ -232,13 +241,20 @@ export function DataTable<TData, TValue>({
         className,
       )}
     >
-      {toolbar ? <div className="border-b border-app-border px-5 py-3.5">{toolbar(table)}</div> : null}
+      {toolbar ? (
+        <div className="border-b border-app-border px-5 py-3.5">
+          {toolbar(table)}
+        </div>
+      ) : null}
 
       <div className="relative w-full overflow-x-auto">
         {loading ? (
-          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[--radius-xl] bg-app-card/70 backdrop-blur-[1px]" aria-label="Loading">
+          <div
+            className="absolute inset-0 z-10 flex items-center justify-center rounded-[--radius-xl] bg-app-card/70 backdrop-blur-[1px]"
+            aria-label="Loading"
+          >
             <div className="flex flex-col items-center gap-2.5">
-              <Loader2 className="size-5 animate-spin text-app-primary" />
+              <Loader2 className="size-5 animate-spin text-app-text" />
               <span className="text-xii text-app-text-muted">Loading...</span>
             </div>
           </div>
@@ -260,9 +276,15 @@ export function DataTable<TData, TValue>({
                       key={header.id}
                       className={cn(
                         "group/head whitespace-nowrap px-5 py-2.5 text-left text-xii font-medium uppercase tracking-[0.5px] text-app-text-muted select-none",
-                        canSort ? "cursor-pointer transition-colors hover:text-app-text" : "",
+                        canSort
+                          ? "cursor-pointer transition-colors hover:text-app-text"
+                          : "",
                       )}
-                      onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                      onClick={
+                        canSort
+                          ? header.column.getToggleSortingHandler()
+                          : undefined
+                      }
                       aria-sort={
                         sorted === "asc"
                           ? "ascending"
@@ -273,7 +295,10 @@ export function DataTable<TData, TValue>({
                     >
                       {header.isPlaceholder ? null : (
                         <span className="inline-flex items-center gap-1.5">
-                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
                           {canSort ? <SortIcon sorted={sorted} /> : null}
                         </span>
                       )}
@@ -286,13 +311,20 @@ export function DataTable<TData, TValue>({
 
           <TableBody>
             {loading ? (
-              <TableSkeleton columns={columns.length} rows={pageSize > 8 ? 8 : pageSize} />
+              <TableSkeleton
+                columns={columns.length}
+                rows={pageSize > 8 ? 8 : pageSize}
+              />
             ) : hasRows ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() ? "selected" : undefined}
-                  data-active={highlightOnClick && activeRowId === row.id ? "true" : undefined}
+                  data-active={
+                    highlightOnClick && activeRowId === row.id
+                      ? "true"
+                      : undefined
+                  }
                   onClick={
                     isClickable
                       ? () => {
@@ -305,7 +337,9 @@ export function DataTable<TData, TValue>({
                     "border-b border-app-border transition-colors last:border-0",
                     "hover:bg-app-hover",
                     isClickable ? "cursor-pointer" : "",
-                    highlightOnClick && activeRowId === row.id ? "bg-app-selected" : "",
+                    highlightOnClick && activeRowId === row.id
+                      ? "bg-app-selected"
+                      : "",
                     row.getIsSelected() ? "bg-app-selected" : "",
                   )}
                 >
@@ -314,7 +348,10 @@ export function DataTable<TData, TValue>({
                       key={cell.id}
                       className="whitespace-nowrap px-5 py-3.5 align-middle text-xiii text-app-text"
                     >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -323,8 +360,12 @@ export function DataTable<TData, TValue>({
               <TableRow className="border-0 hover:bg-transparent">
                 <TableCell colSpan={columns.length} className="h-52 p-0">
                   <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
-                    <p className="text-xiv font-medium text-app-text">{emptyTitle}</p>
-                    <p className="text-xii text-app-text-muted">{emptyDescription}</p>
+                    <p className="text-xiv font-medium text-app-text">
+                      {emptyTitle}
+                    </p>
+                    <p className="text-xii text-app-text-muted">
+                      {emptyDescription}
+                    </p>
                     {emptyAction}
                   </div>
                 </TableCell>
@@ -334,9 +375,13 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      {!hidePagination && !loading ? <DataTablePagination table={table} /> : null}
+      {!hidePagination && !loading ? (
+        <DataTablePagination table={table} />
+      ) : null}
 
-      {footer ? <div className="border-t border-app-border px-5 py-3.5">{footer}</div> : null}
+      {footer ? (
+        <div className="border-t border-app-border px-5 py-3.5">{footer}</div>
+      ) : null}
     </section>
   );
 }

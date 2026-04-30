@@ -10,14 +10,22 @@ type InvoicesTableProps = {
 };
 
 function statusBadgeClass(status: Invoice["status"]) {
-  if (status === "paid") return "border-status-paid-border bg-status-paid-bg text-status-paid-text";
-  if (status === "sent") return "border-status-sent-border bg-status-sent-bg text-status-sent-text";
-  if (status === "void") return "border-status-void-border bg-status-void-bg text-status-void-text";
+  if (status === "paid")
+    return "border-status-paid-border bg-status-paid-bg text-status-paid-text";
+  if (status === "sent")
+    return "border-status-sent-border bg-status-sent-bg text-status-sent-text";
+  if (status === "void")
+    return "border-status-void-border bg-status-void-bg text-status-void-text";
   return "border-status-draft-border bg-status-draft-bg text-status-draft-text";
 }
 
-export default function InvoicesTable({ invoices, customers }: InvoicesTableProps) {
-  const customerMap = new Map(customers.map((customer) => [customer.id, customer]));
+export default function InvoicesTable({
+  invoices,
+  customers,
+}: InvoicesTableProps) {
+  const customerMap = new Map(
+    customers.map((customer) => [customer.id, customer]),
+  );
 
   const columns: ColumnDef<Invoice>[] = [
     {
@@ -29,7 +37,10 @@ export default function InvoicesTable({ invoices, customers }: InvoicesTableProp
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => (
-        <Badge variant="outline" className={`rounded-[--radius-full] capitalize ${statusBadgeClass(row.original.status)}`}>
+        <Badge
+          variant="outline"
+          className={`rounded-[--radius-full] capitalize ${statusBadgeClass(row.original.status)}`}
+        >
           {row.original.status}
         </Badge>
       ),
@@ -45,7 +56,8 @@ export default function InvoicesTable({ invoices, customers }: InvoicesTableProp
     {
       accessorKey: "total",
       header: "Total",
-      cell: ({ row }) => `${row.original.currency} ${row.original.total.toFixed(2)}`,
+      cell: ({ row }) =>
+        `${row.original.currency} ${row.original.total.toFixed(2)}`,
     },
     {
       accessorKey: "issueDate",
@@ -64,7 +76,10 @@ export default function InvoicesTable({ invoices, customers }: InvoicesTableProp
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <Link to={`/dashboard/invoices/${row.original.id}`} className="text-app-primary hover:underline">
+        <Link
+          to={`/dashboard/invoices/${row.original.id}`}
+          className="text-app-text hover:underline"
+        >
           View
         </Link>
       ),

@@ -24,7 +24,9 @@ export default function CustomersTable({
       accessorKey: "type",
       header: "Type",
       cell: ({ row }) => (
-        <span className="capitalize text-app-text-muted">{row.original.type}</span>
+        <span className="capitalize text-app-text-muted">
+          {row.original.type}
+        </span>
       ),
     },
     {
@@ -35,7 +37,11 @@ export default function CustomersTable({
     {
       accessorKey: "country",
       header: "Country",
-      cell: ({ row }) => <span className="text-app-text-muted">{row.original.country ?? "-"}</span>,
+      cell: ({ row }) => (
+        <span className="text-app-text-muted">
+          {row.original.country ?? "-"}
+        </span>
+      ),
     },
     {
       accessorKey: "createdAt",
@@ -53,7 +59,7 @@ export default function CustomersTable({
         <div className="flex items-center gap-2">
           <Link
             to={`/dashboard/customers/${row.original.id}`}
-            className="text-app-primary hover:underline"
+            className="text-app-text hover:underline"
           >
             View
           </Link>

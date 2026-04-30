@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
+import CustomAmountInput from "@/components/custom/custom-amount-input";
 import { CustomButton } from "@/components/custom/custom-button";
 import CustomInput from "@/components/custom/custom-input";
 import CustomSelect from "@/components/custom/custom-select";
@@ -51,9 +52,9 @@ export default function TransactionForm({
     resolver: zodResolver(transactionFormSchema),
     mode: "onChange",
     defaultValues: {
-      customerId: null,
+      customerId: "",
       categoryId: "",
-      amount: 0,
+      amount: "",
       currency: currencies[0]?.code ?? "USD",
       description: null,
       reference: null,
@@ -67,9 +68,9 @@ export default function TransactionForm({
     }
 
     form.reset({
-      customerId: initialValue.customerId,
+      customerId: initialValue.customerId ?? "",
       categoryId: initialValue.categoryId,
-      amount: initialValue.amount,
+      amount: String(initialValue.amount),
       currency: initialValue.currency,
       description: initialValue.description,
       reference: initialValue.reference,
@@ -78,14 +79,18 @@ export default function TransactionForm({
   }, [form, initialValue]);
 
   const selectedCategoryId = form.watch("categoryId");
-  const selectedCategory = categories.find((category) => category.id === selectedCategoryId);
+  const selectedCategory = categories.find(
+    (category) => category.id === selectedCategoryId,
+  );
 
   const availableCategories = useMemo(() => {
     if (!selectedCategory) {
       return categories;
     }
 
-    return categories.filter((category) => category.type === selectedCategory.type);
+    return categories.filter(
+      (category) => category.type === selectedCategory.type,
+    );
   }, [categories, selectedCategory]);
 
   const handleSubmit = form.handleSubmit(async (values) => {
@@ -93,7 +98,7 @@ export default function TransactionForm({
       const parsed = transactionFormSchema.parse(values);
 
       const payload: CreateTransactionPayload = {
-        customerId: parsed.customerId ?? null,
+        customerId: parsed.customerId,
         categoryId: parsed.categoryId,
         amount: parsed.amount,
         currency: parsed.currency,
@@ -105,9 +110,9 @@ export default function TransactionForm({
       await onSubmit(payload);
       if (mode === "create") {
         form.reset({
-          customerId: null,
+          customerId: "",
           categoryId: "",
-          amount: 0,
+          amount: "",
           currency: currencies[0]?.code ?? "USD",
           description: null,
           reference: null,
@@ -115,7 +120,11 @@ export default function TransactionForm({
         });
       }
     } catch (error) {
-      applyApiFormErrors(form, error, getApiErrorMessage(error, "Unable to save transaction"));
+      applyApiFormErrors(
+        form,
+        error,
+        getApiErrorMessage(error, "Unable to save transaction"),
+      );
     }
   });
 
@@ -132,11 +141,10 @@ export default function TransactionForm({
           }))}
           placeholder="Select category"
         />
-        <CustomInput
+        <CustomAmountInput
           control={form.control}
           name="amount"
           label="Amount"
-          type="number"
           placeholder="1250.5"
         />
         <CustomSelect
@@ -155,14 +163,11 @@ export default function TransactionForm({
         <CustomSelect
           control={form.control}
           name="customerId"
-          label="Customer (optional)"
-          options={[
-            { value: "none", label: "No customer" },
-            ...customers.map((customer) => ({
-              value: customer.id,
-              label: `${customer.displayName} (${customer.email})`,
-            })),
-          ]}
+          label="Customer"
+          options={customers.map((customer) => ({
+            value: customer.id,
+            label: `${customer.displayName} (${customer.email})`,
+          }))}
           placeholder="Select customer"
         />
         <CustomInput
@@ -191,15 +196,21 @@ export default function TransactionForm({
 
       {selectedCategory ? (
         <p className="text-xii text-app-text-muted">
-          Transaction type is inferred from selected category: <strong>{selectedCategory.type}</strong>.
+          Transaction type is inferred from selected category:{" "}
+          <strong>{selectedCategory.type}</strong>.
         </p>
       ) : null}
 
       {form.formState.errors.root?.message ? (
-        <p className="text-xii text-app-danger">{form.formState.errors.root.message}</p>
+        <p className="text-xii text-app-danger">
+          {form.formState.errors.root.message}
+        </p>
       ) : null}
 
-      <CustomButton type="submit" loading={isSubmitting || form.formState.isSubmitting}>
+      <CustomButton
+        type="submit"
+        loading={isSubmitting || form.formState.isSubmitting}
+      >
         {mode === "create" ? "Create transaction" : "Save changes"}
       </CustomButton>
     </form>

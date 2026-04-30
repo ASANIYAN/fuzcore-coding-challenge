@@ -1,5 +1,6 @@
 import type { ErrorRequestHandler } from "express";
 import { AppError } from "../lib/errors";
+import { env } from "../lib/env";
 import { logger } from "../lib/logger";
 
 export const globalErrorMiddleware: ErrorRequestHandler = (
@@ -44,6 +45,50 @@ export const globalErrorMiddleware: ErrorRequestHandler = (
     });
   }
 
+  const dbError = err as {
+    code?: string;
+    detail?: string;
+    message?: string;
+  };
+
+  if (dbError?.code === "23505") {
+    return res.status(409).json({
+      success: false,
+      error: {
+        code: "CONFLICT",
+        message: dbError.detail || "Duplicate resource already exists.",
+        details: [],
+      },
+    });
+  }
+
+  if (dbError?.code === "23503" || dbError?.code === "23514") {
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: "BAD_REQUEST",
+        message: dbError.detail || "Request violates a database constraint.",
+        details: [],
+      },
+    });
+  }
+
+  if (
+    dbError?.code === "22P02" ||
+    dbError?.code === "22007" ||
+    dbError?.code === "22003" ||
+    dbError?.code === "22023"
+  ) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: "BAD_REQUEST",
+        message: dbError.message || "Invalid input value in request.",
+        details: [],
+      },
+    });
+  }
+
   logger.error(
     {
       err,
@@ -54,11 +99,17 @@ export const globalErrorMiddleware: ErrorRequestHandler = (
     "unhandled error",
   );
 
+  const unknownError = err as { message?: string };
+  const isProduction = env.NODE_ENV === "production";
+
   return res.status(500).json({
     success: false,
     error: {
       code: "INTERNAL_ERROR",
-      message: "An unexpected error occurred",
+      message:
+        !isProduction && typeof unknownError.message === "string"
+          ? unknownError.message
+          : "An unexpected error occurred",
       details: [],
     },
   });

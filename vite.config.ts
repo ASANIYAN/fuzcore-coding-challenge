@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { getViteAllowedHosts } from "./vite.allowed-hosts";
 
 export default defineConfig({
   plugins: [
@@ -18,7 +19,7 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
-    allowedHosts: true,
+    allowedHosts: getViteAllowedHosts(),
     fs: {
       strict: true,
       deny: ["**/.*"],

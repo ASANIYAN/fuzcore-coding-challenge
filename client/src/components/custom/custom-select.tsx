@@ -12,7 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field";
 
 interface CustomSelectProps<T extends FieldValues> {
   control: Control<T>;
@@ -47,6 +52,11 @@ export function CustomSelect<T extends FieldValues>({
   options,
   error,
 }: CustomSelectProps<T>) {
+  const safeOptions = options.filter(
+    (option) =>
+      typeof option.value === "string" && option.value.trim().length > 0,
+  );
+
   return (
     <Controller
       control={control}
@@ -66,7 +76,10 @@ export function CustomSelect<T extends FieldValues>({
         return (
           <Field data-invalid={hasError} className={cn(containerClassName)}>
             {label ? (
-              <FieldLabel htmlFor={name} className={cn("text-xiii text-app-text", labelClassName)}>
+              <FieldLabel
+                htmlFor={name}
+                className={cn("text-xiii text-app-text", labelClassName)}
+              >
                 {label}
               </FieldLabel>
             ) : null}
@@ -85,19 +98,27 @@ export function CustomSelect<T extends FieldValues>({
                 id={name}
                 aria-invalid={hasError}
                 className={cn(
-                  "h-12 rounded-[--radius-lg] border border-app-border bg-app-card px-4 text-xiv text-app-text shadow-none focus-visible:border-app-primary focus-visible:ring-0",
+                  "h-12 rounded-[--radius-lg] border border-app-border bg-app-card px-4 text-xiv text-app-text shadow-none transition-opacity duration-fast data-[placeholder]:text-app-text-subtle focus-visible:border-app-primary focus-visible:ring-0 hover:opacity-90",
                   hasError && "border-app-danger",
                   selectTriggerClassName,
                 )}
               >
                 <SelectValue placeholder={placeholder} />
               </SelectTrigger>
-              <SelectContent className={cn(selectContentClassName)}>
-                {options.map((option) => (
+              <SelectContent
+                className={cn(
+                  "border-app-border bg-app-card text-app-text shadow-dropdown",
+                  selectContentClassName,
+                )}
+              >
+                {safeOptions.map((option) => (
                   <SelectItem
                     key={option.value}
                     value={option.value}
-                    className={cn("text-xiv", selectItemClassName)}
+                    className={cn(
+                      "text-xiv text-app-text transition-opacity duration-fast focus:bg-app-primary-dim focus:text-app-text hover:opacity-85",
+                      selectItemClassName,
+                    )}
                   >
                     {option.label}
                   </SelectItem>
@@ -106,7 +127,9 @@ export function CustomSelect<T extends FieldValues>({
             </Select>
 
             {description ? (
-              <FieldDescription className="text-xii text-app-text-muted">{description}</FieldDescription>
+              <FieldDescription className="text-xii text-app-text-muted">
+                {description}
+              </FieldDescription>
             ) : null}
 
             {hasError ? (

@@ -1,3 +1,5 @@
+import { BadRequestError } from "./errors";
+
 export const SUPPORTED_CURRENCIES = [
   { code: "USD", name: "US Dollar", symbol: "$", scale: 100 },
   { code: "GBP", name: "British Pound Sterling", symbol: "£", scale: 100 },
@@ -29,7 +31,7 @@ export function listSupportedCurrencies() {
 export function toMinorUnits(amount: number, currency: string): bigint {
   const scale = CURRENCY_SCALE[currency];
   if (scale === undefined) {
-    throw new Error(`Unsupported currency: ${currency}`);
+    throw new BadRequestError(`Unsupported currency: ${currency}`);
   }
   return BigInt(Math.round(amount * scale));
 }
@@ -37,7 +39,7 @@ export function toMinorUnits(amount: number, currency: string): bigint {
 export function toDecimal(amount: bigint, currency: string): number {
   const scale = CURRENCY_SCALE[currency];
   if (scale === undefined) {
-    throw new Error(`Unsupported currency: ${currency}`);
+    throw new BadRequestError(`Unsupported currency: ${currency}`);
   }
   return Number(amount) / scale;
 }

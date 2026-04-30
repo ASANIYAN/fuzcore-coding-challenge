@@ -7,8 +7,12 @@ export default function InvoiceCreateView() {
   return (
     <section className="space-y-6">
       <header className="space-y-1">
-        <h1 className="text-xxiv font-semibold text-app-text">Create invoice</h1>
-        <p className="text-xiii text-app-text-muted">Build a draft invoice with items and tax breakdown.</p>
+        <h1 className="text-xxiv font-semibold text-app-text">
+          Create invoice
+        </h1>
+        <p className="text-xiii text-app-text-muted">
+          Build a draft invoice with items and tax breakdown.
+        </p>
       </header>
 
       <div className="rounded-[--radius-lg] border border-app-border bg-app-card p-5">

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { amountInputSchema } from "@/lib/amount-input";
 
 export const transactionTypeOptions = [
   { value: "income", label: "Income" },
@@ -33,18 +34,9 @@ export const listTransactionsQuerySchema = z.object({
 });
 
 export const transactionFormSchema = z.object({
-  customerId: z
-    .union([z.string().uuid(), z.literal("none"), z.literal("")])
-    .optional()
-    .nullable()
-    .transform((value) => {
-      if (!value || value === "none") {
-        return null;
-      }
-      return value;
-    }),
+  customerId: z.string().uuid("Please select a customer"),
   categoryId: z.string().uuid("Please select a category"),
-  amount: z.coerce.number().positive("Amount must be greater than zero"),
+  amount: amountInputSchema("Amount"),
   currency: currencyCode,
   description: optionalTrimmed,
   reference: optionalTrimmed,
@@ -54,7 +46,7 @@ export const transactionFormSchema = z.object({
 export type ListTransactionsQuery = z.infer<typeof listTransactionsQuerySchema>;
 export type TransactionFormValues = z.input<typeof transactionFormSchema>;
 export type CreateTransactionPayload = {
-  customerId: string | null;
+  customerId: string;
   categoryId: string;
   amount: number;
   currency: string;

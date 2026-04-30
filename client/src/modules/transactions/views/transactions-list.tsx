@@ -6,9 +6,7 @@ import CustomSelect from "@/components/custom/custom-select";
 import TransactionForm from "@/modules/transactions/components/transaction-form";
 import TransactionsTable from "@/modules/transactions/components/transactions-table";
 import { useTransactionsListView } from "@/modules/transactions/hooks/use-transactions-list-view";
-import {
-  transactionTypeOptions,
-} from "@/modules/transactions/utils/validations";
+import { transactionTypeOptions } from "@/modules/transactions/utils/validations";
 
 export default function TransactionsListView() {
   const {
@@ -45,12 +43,15 @@ export default function TransactionsListView() {
       <header className="space-y-1">
         <h1 className="text-xxiv font-semibold text-app-text">Transactions</h1>
         <p className="text-xiii text-app-text-muted">
-          Track income and expenses. Transaction type is inferred from selected category.
+          Track income and expenses. Transaction type is inferred from selected
+          category.
         </p>
       </header>
 
       <div className="rounded-[--radius-lg] border border-app-border bg-app-card p-5">
-        <h2 className="mb-4 text-xvi font-semibold text-app-text">Create transaction</h2>
+        <h2 className="mb-4 text-xvi font-semibold text-app-text">
+          Create transaction
+        </h2>
         <TransactionForm
           mode="create"
           categories={categories}
@@ -64,8 +65,15 @@ export default function TransactionsListView() {
       {editingTransaction ? (
         <div className="rounded-[--radius-lg] border border-app-border bg-app-card p-5">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xvi font-semibold text-app-text">Edit transaction</h2>
-            <CustomButton type="button" size="sm" variant="secondary" onClick={cancelEdit}>
+            <h2 className="text-xvi font-semibold text-app-text">
+              Edit transaction
+            </h2>
+            <CustomButton
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={cancelEdit}
+            >
               Cancel
             </CustomButton>
           </div>
@@ -83,20 +91,25 @@ export default function TransactionsListView() {
 
       <div className="rounded-[--radius-lg] border border-app-border bg-app-card p-5">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xvi font-semibold text-app-text">Filter transactions</h2>
-          <Link to="/dashboard/transactions/import" className="text-xiii text-app-primary hover:underline">
+          <h2 className="text-xvi font-semibold text-app-text">
+            Filter transactions
+          </h2>
+          <Link
+            to="/dashboard/transactions/import"
+            className="text-xiii text-app-text hover:underline"
+          >
             Go to CSV import
           </Link>
         </div>
-        <form
-          onSubmit={applyFilters}
-          className="grid gap-4 md:grid-cols-3"
-        >
+        <form onSubmit={applyFilters} className="grid gap-4 md:grid-cols-3">
           <CustomSelect
             control={filterForm.control}
             name="type"
             label="Type"
-            options={[{ value: "all", label: "All" }, ...transactionTypeOptions]}
+            options={[
+              { value: "all", label: "All" },
+              ...transactionTypeOptions,
+            ]}
             placeholder="All"
           />
           <CustomSelect
@@ -125,10 +138,22 @@ export default function TransactionsListView() {
             ]}
             placeholder="All customers"
           />
-          <CustomInput control={filterForm.control} name="startDate" label="From" type="date" />
-          <CustomInput control={filterForm.control} name="endDate" label="To" type="date" />
+          <CustomInput
+            control={filterForm.control}
+            name="startDate"
+            label="From"
+            type="date"
+          />
+          <CustomInput
+            control={filterForm.control}
+            name="endDate"
+            label="To"
+            type="date"
+          />
           <div className="flex items-end">
-            <CustomButton type="submit" loading={isFetching}>Apply filters</CustomButton>
+            <CustomButton type="submit" loading={isFetching}>
+              Apply filters
+            </CustomButton>
           </div>
         </form>
       </div>
@@ -141,7 +166,9 @@ export default function TransactionsListView() {
           categories={categories}
           customers={customers}
           currencies={currencies}
-          editingTransactionId={isUpdating && editingTransaction ? editingTransaction.id : null}
+          editingTransactionId={
+            isUpdating && editingTransaction ? editingTransaction.id : null
+          }
           deletingTransactionId={deletingTransactionId}
           onEdit={startEdit}
           onDelete={openDeleteDialog}
@@ -150,7 +177,8 @@ export default function TransactionsListView() {
 
       <div className="flex items-center justify-between rounded-[--radius-lg] border border-app-border bg-app-card p-4">
         <p className="text-xiii text-app-text-muted">
-          Page {meta.page} of {Math.max(meta.totalPages, 1)} ({meta.total} total)
+          Page {meta.page} of {Math.max(meta.totalPages, 1)} ({meta.total}{" "}
+          total)
         </p>
         <div className="flex gap-2">
           <CustomButton
@@ -179,7 +207,10 @@ export default function TransactionsListView() {
         title="Delete transaction?"
         description="This transaction will be removed from your records."
         confirmLabel="Delete transaction"
-        loading={!!pendingDeleteTransactionId && deletingTransactionId === pendingDeleteTransactionId}
+        loading={
+          !!pendingDeleteTransactionId &&
+          deletingTransactionId === pendingDeleteTransactionId
+        }
         onOpenChange={(open) => {
           if (!open) {
             closeDeleteDialog();

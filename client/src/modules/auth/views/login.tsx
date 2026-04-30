@@ -32,7 +32,7 @@ export default function LoginView() {
           </div>
           <Link
             to="/forgot-password"
-            className="mt-4 inline-block text-xiii text-app-primary transition-colors hover:text-app-primary-hover"
+            className="mt-4 inline-block text-xiii text-app-text transition-colors hover:text-app-text-hover"
           >
             Forgot your password?
           </Link>
@@ -40,7 +40,7 @@ export default function LoginView() {
             Don&apos;t have an account?{" "}
             <Link
               to="/signup"
-              className="text-app-primary transition-colors hover:text-app-primary-hover"
+              className="text-app-text transition-colors hover:text-app-text-hover"
             >
               Create one
             </Link>

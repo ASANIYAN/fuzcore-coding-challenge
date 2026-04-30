@@ -6,7 +6,12 @@ import {
   type FieldValues,
   type Path,
 } from "react-hook-form";
-import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
 interface CustomInputProps<T extends FieldValues> {
@@ -80,7 +85,10 @@ export function CustomInput<T extends FieldValues>({
         return (
           <Field data-invalid={hasError} className={cn(containerClassName)}>
             {label ? (
-              <FieldLabel htmlFor={name} className={cn("text-xiii text-app-text", labelClassName)}>
+              <FieldLabel
+                htmlFor={name}
+                className={cn("text-xiii text-app-text", labelClassName)}
+              >
                 {label}
               </FieldLabel>
             ) : null}
@@ -91,7 +99,9 @@ export function CustomInput<T extends FieldValues>({
                 hasError && "border-app-danger",
               )}
             >
-              {leftIcon ? <span className="mr-2 text-app-text-muted">{leftIcon}</span> : null}
+              {leftIcon ? (
+                <span className="mr-2 text-app-text-muted">{leftIcon}</span>
+              ) : null}
               <Input
                 ref={ref}
                 id={name}
@@ -99,7 +109,9 @@ export function CustomInput<T extends FieldValues>({
                 value={value ?? ""}
                 onChange={(event) => {
                   const inputValue = event.target.value;
-                  onChange(sanitizeValue ? sanitizeValue(inputValue) : inputValue);
+                  onChange(
+                    sanitizeValue ? sanitizeValue(inputValue) : inputValue,
+                  );
                 }}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => {
@@ -117,11 +129,15 @@ export function CustomInput<T extends FieldValues>({
                   inputClassName,
                 )}
               />
-              {rightIcon ? <span className="ml-2 text-app-text-muted">{rightIcon}</span> : null}
+              {rightIcon ? (
+                <span className="ml-2 text-app-text-muted">{rightIcon}</span>
+              ) : null}
             </div>
 
             {description ? (
-              <FieldDescription className="text-xii text-app-text-muted">{description}</FieldDescription>
+              <FieldDescription className="text-xii text-app-text-muted">
+                {description}
+              </FieldDescription>
             ) : null}
 
             {hasError ? (
