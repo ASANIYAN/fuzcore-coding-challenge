@@ -1,10 +1,49 @@
 import axios from "axios";
 import { notifyAuthFailure } from "@/lib/auth-failure";
 
+const LOOPBACK_HOST_PATTERN = /^(localhost|127\.0\.0\.1)$/i;
+
+function getDefaultPort(protocol: string) {
+  return protocol === "https:" ? "443" : "80";
+}
+
+function ensureApiPath(url: URL) {
+  const normalizedPath = url.pathname.replace(/\/+$/, "");
+  if (normalizedPath.endsWith("/api")) {
+    url.pathname = normalizedPath || "/api";
+    return;
+  }
+
+  url.pathname = `${normalizedPath}/api`;
+}
+
 function getApiBaseUrl() {
-  const rawBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5001/api";
-  const trimmedBaseUrl = rawBaseUrl.replace(/\/+$/, "");
-  return trimmedBaseUrl.endsWith("/api") ? trimmedBaseUrl : `${trimmedBaseUrl}/api`;
+  const envBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+  const fallbackOrigin =
+    typeof window !== "undefined" ? window.location.origin : "http://localhost:5001";
+  const parsedUrl = new URL(envBaseUrl || "/api", fallbackOrigin);
+
+  if (typeof window !== "undefined") {
+    const currentHost = window.location.hostname;
+    const currentProtocol = window.location.protocol;
+    const currentPort = window.location.port || getDefaultPort(currentProtocol);
+    const basePort = parsedUrl.port || getDefaultPort(parsedUrl.protocol);
+
+    const isCurrentLoopback = LOOPBACK_HOST_PATTERN.test(currentHost);
+    const isBaseLoopback = LOOPBACK_HOST_PATTERN.test(parsedUrl.hostname);
+
+    if (
+      isCurrentLoopback &&
+      isBaseLoopback &&
+      parsedUrl.protocol === currentProtocol &&
+      basePort === currentPort
+    ) {
+      parsedUrl.hostname = currentHost;
+    }
+  }
+
+  ensureApiPath(parsedUrl);
+  return parsedUrl.toString().replace(/\/+$/, "");
 }
 
 const apiBaseUrl = getApiBaseUrl();
