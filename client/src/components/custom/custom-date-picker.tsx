@@ -100,10 +100,14 @@ export function CustomDatePicker<T extends FieldValues>({
                 <CalendarIcon className="size-4 text-app-text/70" />
               </PopoverTrigger>
               <PopoverContent
-                className="w-auto border-app-border bg-app-card p-0 text-app-text shadow-dropdown"
+                className="w-[var(--radix-popover-trigger-width)] min-w-[var(--radix-popover-trigger-width)] border-app-border bg-app-card p-0 text-app-text shadow-dropdown"
                 align="start"
               >
                 <Calendar
+                  className="w-full"
+                  classNames={{
+                    root: "w-full",
+                  }}
                   mode="single"
                   selected={selectedDate}
                   disabled={disableDate}

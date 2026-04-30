@@ -186,6 +186,11 @@ export const transactions = pgTable(
     index("transactions_customer_id_idx").on(table.customerId),
     index("transactions_category_id_idx").on(table.categoryId),
     index("transactions_transaction_date_idx").on(table.transactionDate),
+    uniqueIndex("transactions_user_reference_unique")
+      .on(table.userId, table.reference)
+      .where(
+        sql`${table.reference} is not null and ${table.archivedAt} is null`,
+      ),
     uniqueIndex("transactions_user_import_hash_unique")
       .on(table.userId, table.importHash)
       .where(sql`${table.importHash} is not null`),

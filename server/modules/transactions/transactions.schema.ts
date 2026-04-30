@@ -9,6 +9,13 @@ const currencySchema = z
     message: "Unsupported currency",
   });
 
+function isPastOrTodayDate(value: Date) {
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+
+  return value <= today;
+}
+
 export const transactionIdParamSchema = z.object({
   id: z.string().uuid(),
 });
@@ -30,7 +37,9 @@ export const createTransactionSchema = z.object({
   currency: currencySchema,
   description: z.string().trim().optional().nullable(),
   reference: z.string().trim().optional().nullable(),
-  transactionDate: z.coerce.date(),
+  transactionDate: z.coerce.date().refine(isPastOrTodayDate, {
+    message: "Transaction date cannot be in the future",
+  }),
 }).strict();
 
 export const updateTransactionSchema = z
@@ -41,7 +50,13 @@ export const updateTransactionSchema = z
     currency: currencySchema.optional(),
     description: z.string().trim().optional().nullable(),
     reference: z.string().trim().optional().nullable(),
-    transactionDate: z.coerce.date().optional(),
+    transactionDate: z
+      .coerce
+      .date()
+      .refine(isPastOrTodayDate, {
+        message: "Transaction date cannot be in the future",
+      })
+      .optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0, {

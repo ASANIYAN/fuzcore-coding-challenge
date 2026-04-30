@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { CustomButton } from "@/components/custom/custom-button";
 import ConfirmActionDialog from "@/components/custom/confirm-action-dialog";
-import CustomInput from "@/components/custom/custom-input";
+import CustomDatePicker from "@/components/custom/custom-date-picker";
 import CustomSelect from "@/components/custom/custom-select";
 import TransactionForm from "@/modules/transactions/components/transaction-form";
 import TransactionsTable from "@/modules/transactions/components/transactions-table";
@@ -43,8 +43,7 @@ export default function TransactionsListView() {
       <header className="space-y-1">
         <h1 className="text-xxiv font-semibold text-app-text">Transactions</h1>
         <p className="text-xiii text-app-text-muted">
-          Track income and expenses. Transaction type is inferred from selected
-          category.
+          Track income and expenses.
         </p>
       </header>
 
@@ -138,17 +137,17 @@ export default function TransactionsListView() {
             ]}
             placeholder="All customers"
           />
-          <CustomInput
+          <CustomDatePicker
             control={filterForm.control}
             name="startDate"
             label="From"
-            type="date"
+            placeholder="Select start date"
           />
-          <CustomInput
+          <CustomDatePicker
             control={filterForm.control}
             name="endDate"
             label="To"
-            type="date"
+            placeholder="Select end date"
           />
           <div className="flex items-end">
             <CustomButton type="submit" loading={isFetching}>

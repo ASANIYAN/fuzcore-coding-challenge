@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import CustomInput from "@/components/custom/custom-input";
+import CustomDatePicker from "@/components/custom/custom-date-picker";
 import { useDashboardView } from "@/modules/dashboard/hooks/use-dashboard-view";
 
 export default function DashboardView() {
@@ -19,17 +19,17 @@ export default function DashboardView() {
           Date range
         </h2>
         <form className="grid gap-4 md:grid-cols-2">
-          <CustomInput
+          <CustomDatePicker
             control={filterForm.control}
             name="from"
             label="From"
-            type="date"
+            placeholder="Select start date"
           />
-          <CustomInput
+          <CustomDatePicker
             control={filterForm.control}
             name="to"
             label="To"
-            type="date"
+            placeholder="Select end date"
           />
         </form>
         <p className="mt-3 text-xii text-app-text-muted">

@@ -3,8 +3,10 @@ import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import CustomAmountInput from "@/components/custom/custom-amount-input";
 import { CustomButton } from "@/components/custom/custom-button";
+import CustomDatePicker from "@/components/custom/custom-date-picker";
 import CustomInput from "@/components/custom/custom-input";
 import CustomSelect from "@/components/custom/custom-select";
+import CustomTimePicker from "@/components/custom/custom-time-picker";
 import { applyApiFormErrors } from "@/lib/apply-api-form-errors";
 import { getApiErrorMessage } from "@/lib/get-api-error-message";
 import type { Category } from "@/modules/categories/types";
@@ -35,8 +37,39 @@ function toDateTimeLocalInput(isoString: string) {
   return localDate.toISOString().slice(0, 16);
 }
 
-function fromDateTimeLocalInput(value: string) {
-  return new Date(value).toISOString();
+function toDateInput(isoString: string) {
+  return toDateTimeLocalInput(isoString).slice(0, 10);
+}
+
+function toTimeInput(isoString: string) {
+  const localDateTime = toDateTimeLocalInput(isoString);
+  const [hourString = "00", minute = "00"] = localDateTime
+    .slice(11, 16)
+    .split(":");
+  const hour = Number(hourString);
+  const period = hour >= 12 ? "PM" : "AM";
+  const normalizedHour = hour % 12 || 12;
+
+  return `${String(normalizedHour).padStart(2, "0")}:${minute} ${period}`;
+}
+
+function fromDateAndTimeInput(dateValue: string, timeValue: string) {
+  const [timePart = "12:00", period = "AM"] = timeValue.split(" ");
+  const [rawHour = "12", minute = "00"] = timePart.split(":");
+  const hour = Number(rawHour);
+  const normalizedHour =
+    period === "PM" ? (hour % 12) + 12 : hour === 12 ? 0 : hour;
+
+  return new Date(
+    `${dateValue}T${String(normalizedHour).padStart(2, "0")}:${minute}:00`,
+  ).toISOString();
+}
+
+function disableFutureTransactionDates(date: Date) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return date > today;
 }
 
 export default function TransactionForm({
@@ -58,7 +91,8 @@ export default function TransactionForm({
       currency: currencies[0]?.code ?? "USD",
       description: null,
       reference: null,
-      transactionDate: toDateTimeLocalInput(new Date().toISOString()),
+      transactionDate: toDateInput(new Date().toISOString()),
+      transactionTime: toTimeInput(new Date().toISOString()),
     },
   });
 
@@ -74,7 +108,8 @@ export default function TransactionForm({
       currency: initialValue.currency,
       description: initialValue.description,
       reference: initialValue.reference,
-      transactionDate: toDateTimeLocalInput(initialValue.transactionDate),
+      transactionDate: toDateInput(initialValue.transactionDate),
+      transactionTime: toTimeInput(initialValue.transactionDate),
     });
   }, [form, initialValue]);
 
@@ -95,16 +130,17 @@ export default function TransactionForm({
 
   const handleSubmit = form.handleSubmit(async (values) => {
     try {
-      const parsed = transactionFormSchema.parse(values);
-
       const payload: CreateTransactionPayload = {
-        customerId: parsed.customerId,
-        categoryId: parsed.categoryId,
-        amount: parsed.amount,
-        currency: parsed.currency,
-        description: parsed.description ?? null,
-        reference: parsed.reference ?? null,
-        transactionDate: fromDateTimeLocalInput(parsed.transactionDate),
+        customerId: values.customerId,
+        categoryId: values.categoryId,
+        amount: Number(values.amount),
+        currency: values.currency,
+        description: values.description ?? null,
+        reference: values.reference ?? null,
+        transactionDate: fromDateAndTimeInput(
+          values.transactionDate,
+          values.transactionTime,
+        ),
       };
 
       await onSubmit(payload);
@@ -116,7 +152,8 @@ export default function TransactionForm({
           currency: currencies[0]?.code ?? "USD",
           description: null,
           reference: null,
-          transactionDate: toDateTimeLocalInput(new Date().toISOString()),
+          transactionDate: toDateInput(new Date().toISOString()),
+          transactionTime: toTimeInput(new Date().toISOString()),
         });
       }
     } catch (error) {
@@ -170,14 +207,21 @@ export default function TransactionForm({
           }))}
           placeholder="Select customer"
         />
-        <CustomInput
+        <CustomDatePicker
           control={form.control}
           name="transactionDate"
           label="Transaction date"
-          type="datetime-local"
-          inputClassName="[&::-webkit-calendar-picker-indicator]:opacity-80"
+          placeholder="Select date"
+          disableDate={disableFutureTransactionDates}
         />
       </div>
+
+      <CustomTimePicker
+        control={form.control}
+        name="transactionTime"
+        label="Transaction time"
+        placeholder="Select time"
+      />
 
       <div className="grid gap-4 md:grid-cols-2">
         <CustomInput
@@ -193,13 +237,6 @@ export default function TransactionForm({
           placeholder="Project milestone payment"
         />
       </div>
-
-      {selectedCategory ? (
-        <p className="text-xii text-app-text-muted">
-          Transaction type is inferred from selected category:{" "}
-          <strong>{selectedCategory.type}</strong>.
-        </p>
-      ) : null}
 
       {form.formState.errors.root?.message ? (
         <p className="text-xii text-app-danger">

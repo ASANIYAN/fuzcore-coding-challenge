@@ -129,6 +129,22 @@ export class TransactionsService {
     this.enqueueImportJob = deps?.enqueueImportJob ?? enqueueTransactionImportJob;
   }
 
+  private isDuplicateReferenceError(error: unknown) {
+    const dbError = error as {
+      code?: string;
+      constraint?: string;
+      detail?: string;
+      table?: string;
+    };
+
+    return (
+      dbError.code === "23505" &&
+      (dbError.constraint === "transactions_user_reference_unique" ||
+        dbError.table === "transactions" ||
+        dbError.detail?.includes("(user_id, reference)") === true)
+    );
+  }
+
   private async resolveCategoryForUser(userId: string, categoryId: string) {
     const [category] = await this.db
       .select({
@@ -316,20 +332,30 @@ export class TransactionsService {
     const category = await this.resolveCategoryForUser(userId, input.categoryId);
     await this.ensureCustomerForUser(userId, input.customerId ?? null);
 
-    const [transaction] = await this.db
-      .insert(transactions)
-      .values({
-        userId,
-        customerId: input.customerId ?? null,
-        categoryId: input.categoryId,
-        type: category.type,
-        amount: toMinorUnits(input.amount, input.currency),
-        currency: input.currency,
-        description: input.description ?? null,
-        reference: input.reference ?? null,
-        transactionDate: input.transactionDate,
-      })
-      .returning();
+    let transaction;
+    try {
+      [transaction] = await this.db
+        .insert(transactions)
+        .values({
+          userId,
+          customerId: input.customerId ?? null,
+          categoryId: input.categoryId,
+          type: category.type,
+          amount: toMinorUnits(input.amount, input.currency),
+          currency: input.currency,
+          description: input.description ?? null,
+          reference: input.reference ?? null,
+          transactionDate: input.transactionDate,
+        })
+        .returning();
+    } catch (error) {
+      if (this.isDuplicateReferenceError(error)) {
+        throw new BadRequestError(
+          "A transaction with this reference already exists.",
+        );
+      }
+      throw error;
+    }
 
     return serializeTransaction(transaction);
   }
@@ -363,24 +389,35 @@ export class TransactionsService {
 
     await this.ensureCustomerForUser(userId, effectiveCustomerId ?? null);
 
-    const [updated] = await this.db
-      .update(transactions)
-      .set({
-        customerId: effectiveCustomerId ?? null,
-        categoryId: effectiveCategoryId,
-        type: effectiveCategory.type,
-        amount:
-          input.amount !== undefined
-            ? toMinorUnits(input.amount, effectiveCurrency)
-            : existing.amount,
-        currency: effectiveCurrency,
-        description: input.description === undefined ? existing.description : input.description,
-        reference: input.reference === undefined ? existing.reference : input.reference,
-        transactionDate: input.transactionDate ?? existing.transactionDate,
-        updatedAt: new Date(),
-      })
-      .where(eq(transactions.id, transactionId))
-      .returning();
+    let updated;
+    try {
+      [updated] = await this.db
+        .update(transactions)
+        .set({
+          customerId: effectiveCustomerId ?? null,
+          categoryId: effectiveCategoryId,
+          type: effectiveCategory.type,
+          amount:
+            input.amount !== undefined
+              ? toMinorUnits(input.amount, effectiveCurrency)
+              : existing.amount,
+          currency: effectiveCurrency,
+          description:
+            input.description === undefined ? existing.description : input.description,
+          reference: input.reference === undefined ? existing.reference : input.reference,
+          transactionDate: input.transactionDate ?? existing.transactionDate,
+          updatedAt: new Date(),
+        })
+        .where(eq(transactions.id, transactionId))
+        .returning();
+    } catch (error) {
+      if (this.isDuplicateReferenceError(error)) {
+        throw new BadRequestError(
+          "A transaction with this reference already exists.",
+        );
+      }
+      throw error;
+    }
 
     return serializeTransaction(updated);
   }

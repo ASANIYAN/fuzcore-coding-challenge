@@ -3,6 +3,7 @@ import { useEffect, useMemo } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import CustomAmountInput from "@/components/custom/custom-amount-input";
 import { CustomButton } from "@/components/custom/custom-button";
+import CustomDatePicker from "@/components/custom/custom-date-picker";
 import CustomInput from "@/components/custom/custom-input";
 import CustomSelect from "@/components/custom/custom-select";
 import { applyApiFormErrors } from "@/lib/apply-api-form-errors";
@@ -105,15 +106,14 @@ export default function InvoiceForm({
 
   const handleSubmit = form.handleSubmit(async (values) => {
     try {
-      const parsed = invoiceFormSchema.parse(values);
       const payload: CreateInvoicePayload = {
-        customerId: parsed.customerId,
-        currency: parsed.currency,
-        taxRate: parsed.taxRate == null ? null : Number(parsed.taxRate),
-        issueDate: toIsoDate(parsed.issueDate),
-        dueDate: parsed.dueDate ? toIsoDate(parsed.dueDate) : null,
-        notes: parsed.notes ?? null,
-        items: parsed.items.map((item, index) => ({
+        customerId: values.customerId,
+        currency: values.currency,
+        taxRate: values.taxRate == null ? null : Number(values.taxRate),
+        issueDate: toIsoDate(values.issueDate),
+        dueDate: values.dueDate ? toIsoDate(values.dueDate) : null,
+        notes: values.notes ?? null,
+        items: values.items.map((item, index) => ({
           description: item.description,
           quantity: Number(item.quantity),
           unitPrice: Number(item.unitPrice),
@@ -170,17 +170,17 @@ export default function InvoiceForm({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <CustomInput
+        <CustomDatePicker
           control={form.control}
           name="issueDate"
           label="Issue date"
-          type="date"
+          placeholder="Select issue date"
         />
-        <CustomInput
+        <CustomDatePicker
           control={form.control}
           name="dueDate"
           label="Due date"
-          type="date"
+          placeholder="Select due date"
         />
       </div>
 

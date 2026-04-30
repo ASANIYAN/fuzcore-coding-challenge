@@ -22,6 +22,7 @@ const currencyCode = z
   .string()
   .trim()
   .regex(/^[A-Z]{3}$/, "Currency must be a 3-letter code");
+const todayDateString = () => new Date().toISOString().slice(0, 10);
 
 export const listTransactionsQuerySchema = z.object({
   page: z.number().int().min(1).default(1),
@@ -40,7 +41,15 @@ export const transactionFormSchema = z.object({
   currency: currencyCode,
   description: optionalTrimmed,
   reference: optionalTrimmed,
-  transactionDate: z.string().min(1, "Transaction date is required"),
+  transactionDate: z
+    .string()
+    .min(1, "Transaction date is required")
+    .refine((value) => value <= todayDateString(), {
+      message: "Transaction date cannot be in the future",
+    }),
+  transactionTime: z
+    .string()
+    .regex(/^\d{2}:\d{2} (AM|PM)$/, "Transaction time is required"),
 });
 
 export type ListTransactionsQuery = z.infer<typeof listTransactionsQuerySchema>;

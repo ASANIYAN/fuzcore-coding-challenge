@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import CustomInput from "@/components/custom/custom-input";
+import CustomDatePicker from "@/components/custom/custom-date-picker";
 import CustomSelect from "@/components/custom/custom-select";
 import { CustomButton } from "@/components/custom/custom-button";
 import InvoicesTable from "@/modules/invoices/components/invoices-table";
@@ -66,17 +66,17 @@ export default function InvoicesListView() {
             ]}
             placeholder="All customers"
           />
-          <CustomInput
+          <CustomDatePicker
             control={filterForm.control}
             name="from"
             label="From"
-            type="date"
+            placeholder="Select start date"
           />
-          <CustomInput
+          <CustomDatePicker
             control={filterForm.control}
             name="to"
             label="To"
-            type="date"
+            placeholder="Select end date"
           />
           <div className="flex items-end">
             <CustomButton type="submit" loading={isFetching}>
