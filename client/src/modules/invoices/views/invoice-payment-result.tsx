@@ -1,29 +1,28 @@
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 
 export default function InvoicePaymentResultView() {
-  const { id = "" } = useParams();
   const [searchParams] = useSearchParams();
   const payment = (searchParams.get("payment") ?? "").toLowerCase();
 
   const isSuccess = payment === "success";
-  const isFailed = payment === "failed";
+  const isCancelled = payment === "cancelled";
 
   const title = isSuccess
     ? "Payment successful"
-    : isFailed
-      ? "Payment failed"
+    : isCancelled
+      ? "Payment cancelled"
       : "Payment status unavailable";
 
   const description = isSuccess
     ? "Thank you. Your payment has been confirmed and the invoice should update shortly."
-    : isFailed
-      ? "Your payment did not complete. Please retry the payment link or contact support."
-      : "We could not confirm this payment result. Please check your email receipt or contact support.";
+    : isCancelled
+      ? "This payment was cancelled before completion. If you still want to pay, please contact the person or business that sent this invoice link."
+      : "We could not confirm this payment status. Please contact the person or business that sent this invoice link.";
 
   const badgeClass = isSuccess
     ? "border-status-paid-border bg-status-paid-bg text-status-paid-text"
-    : isFailed
+    : isCancelled
       ? "border-app-danger-border bg-app-danger-dim text-app-danger"
       : "border-status-draft-border bg-status-draft-bg text-status-draft-text";
 
@@ -38,16 +37,11 @@ export default function InvoicePaymentResultView() {
         </div>
         <p className="text-xiii text-app-text-muted">{description}</p>
 
-        <div className="mt-6 rounded-[--radius-md] border border-app-border bg-app-surface p-4">
-          <p className="text-xii text-app-text-subtle">Invoice ID</p>
-          <p className="mt-1 break-all text-xiii text-app-text">{id}</p>
-        </div>
-
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link to="/login" className="text-xiii text-app-primary transition-colors hover:text-app-primary-hover">
-            Go to login
-          </Link>
-        </div>
+        {isCancelled ? (
+          <p className="mt-6 text-xiii text-app-text-muted">
+            Reach out to the invoice sender if you need a new payment attempt or updated payment details.
+          </p>
+        ) : null}
       </div>
     </section>
   );
