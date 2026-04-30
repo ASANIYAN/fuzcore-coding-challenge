@@ -1,5 +1,8 @@
 import { Router } from "express";
-import { requireAuth } from "../../middleware/auth.middleware";
+import {
+  requireAuth,
+  requireVerifiedUser,
+} from "../../middleware/auth.middleware";
 import { rateLimit } from "../../middleware/rate-limit.middleware";
 import { validate } from "../../middleware/validate.middleware";
 import { InvoicesController } from "./invoices.controller";
@@ -16,6 +19,7 @@ const invoicesController = new InvoicesController(invoicesService);
 export const invoicesRouter = Router();
 
 invoicesRouter.use(requireAuth);
+invoicesRouter.use(requireVerifiedUser);
 invoicesRouter.use(rateLimit("standard-user-minute"));
 
 invoicesRouter.get("/", invoicesController.listInvoices);

@@ -42,8 +42,37 @@ export function useLoginForm() {
 
   const onSubmit = async (values: LoginFormValues) => {
     try {
-      await unauthApi.post("/auth/login", values);
-      await queryClient.invalidateQueries({ queryKey: SESSION_STATUS_QUERY_KEY });
+      await unauthApi.post<{
+        success: true;
+        data: {
+          user: {
+            id: string;
+            email: string;
+            emailVerifiedAt: string | null;
+          };
+          message: string;
+        };
+      }>("/auth/login", values);
+
+      const sessionResponse = await unauthApi.get<{
+        success: true;
+        data: {
+          authenticated: boolean;
+          user: {
+            id: string;
+            email: string;
+            emailVerifiedAt: string | null;
+          } | null;
+        };
+      }>("/auth/session", {
+        params: { t: Date.now() },
+      });
+
+      if (!sessionResponse.data.data.authenticated || !sessionResponse.data.data.user) {
+        throw new Error("Your session could not be established. Please try signing in again.");
+      }
+
+      queryClient.setQueryData(SESSION_STATUS_QUERY_KEY, sessionResponse.data.data);
       toast.success("Login successful");
       void navigate("/dashboard");
     } catch (error) {
